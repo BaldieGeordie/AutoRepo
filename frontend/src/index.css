@@ -450,13 +450,15 @@ button {
 }
 
 .record-table,
-.event-feed {
+.event-feed,
+.lifecycle-list {
   display: grid;
   gap: 10px;
 }
 
 .record-row,
-.event-row {
+.event-row,
+.lifecycle-step {
   display: grid;
   align-items: center;
   gap: 12px;
@@ -917,6 +919,76 @@ button {
   padding: 12px 14px;
 }
 
+.lifecycle-step {
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: 12px 14px;
+}
+
+.lifecycle-step strong,
+.lifecycle-step span,
+.lifecycle-step em {
+  display: block;
+}
+
+.lifecycle-step strong {
+  color: var(--ice-white);
+  font-size: 0.92rem;
+}
+
+.lifecycle-step span,
+.care-list li {
+  color: var(--cool-grey);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.lifecycle-step em {
+  color: var(--slate-grey);
+  font-style: normal;
+  font-size: 0.79rem;
+}
+
+.recall-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.recall-grid div {
+  min-height: 82px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid rgba(42, 52, 70, 0.78);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(7, 10, 15, 0.36);
+}
+
+.recall-grid span {
+  color: var(--slate-grey);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.recall-grid strong {
+  color: var(--ice-white);
+  font-size: 1.28rem;
+}
+
+.care-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.care-list li::marker {
+  color: var(--verified-cyan);
+  font-weight: 900;
+}
+
 .event-row time {
   color: var(--slate-grey);
   font-family: "SFMono-Regular", Consolas, monospace;
@@ -993,6 +1065,10 @@ button {
   }
 
   .record-row {
+    grid-template-columns: 1fr;
+  }
+
+  .recall-grid {
     grid-template-columns: 1fr;
   }
 

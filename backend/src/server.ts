@@ -24,8 +24,16 @@ const starterAssembly = {
   componentCount: 4,
   anchoredSnapshot: {
     snapshotRef: "snap_demo_expected_0001",
+    snapshotType: "INITIAL_SALE_CONFIGURATION",
     contentHash: "0x4d0f8a42b2fb2c92f6b3d3c9f0b7f09774f24116b9f25334f0b86a204de4fa91",
     targetLabel: "EVM dev target",
+  },
+  initialSaleBaseline: {
+    soldAt: "2026-04-19T10:30:00.000Z",
+    soldBy: "OEM plant 04",
+    componentCount: 4,
+    purpose:
+      "A sealed vehicle composition at first sale, used as the warranty-period baseline for later repair checks.",
   },
   expectedComponents: [
     {
@@ -63,6 +71,83 @@ const starterAssembly = {
   ],
 };
 
+const demoRepairEvent = {
+  repairEventId: "repair_demo_0001",
+  assemblyUid: starterAssembly.assemblyUid,
+  serviceOrderRef: "SO-WTY-184201-044",
+  warrantyClaimRef: "WTY-ADAS-184201",
+  reason: "ADAS calibration fault reported during warranty period",
+  status: "WARRANTY_REVIEW",
+  repairer: {
+    name: "Northgate OEM Service",
+    tier: "OEM repairer",
+    networkStatus: "Inside approved repairer network",
+  },
+  openedBy: {
+    displayName: "M. Kaur",
+    role: "Approved repairer technician",
+  },
+  lifecycle: [
+    {
+      action: "VERIFY_PRESENT",
+      positionLabel: "driver-assist-sensor",
+      expectedSerial: "ADAS-99015-R",
+      observedSerial: "ADAS-99015-R",
+      networkStatus: "Inside approved repairer network",
+      warrantyImpact: "None",
+      authenticatedBy: "M. Kaur",
+      notes: "Original sensor verified against the sealed initial-sale snapshot before removal.",
+    },
+    {
+      action: "BOOK_OFF",
+      positionLabel: "driver-assist-sensor",
+      expectedSerial: "ADAS-99015-R",
+      observedSerial: "ADAS-99015-R",
+      networkStatus: "Inside approved repairer network",
+      warrantyImpact: "None",
+      authenticatedBy: "M. Kaur",
+      notes: "Faulting sensor removed from vehicle assembly and retained against service order.",
+    },
+    {
+      action: "BOOK_ON",
+      positionLabel: "driver-assist-sensor",
+      expectedSerial: "ADAS-99015-R",
+      observedSerial: "ADAS-99177-X",
+      networkStatus: "Outside approved warranty network",
+      warrantyImpact: "Warranty review required",
+      authenticatedBy: "Self-declared repair record",
+      notes:
+        "Replacement sensor serial is present on the car, but evidence shows the fitment originated outside the OEM repairer network.",
+    },
+  ],
+};
+
+const demoRecallCampaign = {
+  campaignCode: "SC-ADAS-27F",
+  title: "ADAS sensor water ingress safety campaign",
+  severity: "SAFETY_RECALL",
+  status: "ACTIVE",
+  target: {
+    partNumber: "SENSOR-ADAS-99015",
+    serialPrefix: "ADAS-99",
+    rule: "Target vehicles currently carrying affected ADAS sensor serials.",
+  },
+  focusedExposure: {
+    assemblyUid: starterAssembly.assemblyUid,
+    vin: "WVWZZZCD7NW184201",
+    componentSerial: "ADAS-99015-R",
+    exposureStatus: "REPAIR_BOOKED",
+    reason: "Affected component is attached to this vehicle assembly.",
+    action:
+      "Book the affected component off the car, fit an authenticated replacement, then clear the campaign exposure.",
+  },
+  buyerCareSignal: {
+    label: "Care history evidence",
+    summary:
+      "Future buyers can see that a recall-sensitive component was identified, removed, replaced, and authenticated instead of relying on a generic service stamp.",
+  },
+};
+
 async function main() {
   await app.register(cors, {
     origin: true,
@@ -82,18 +167,24 @@ async function main() {
     status: "starter",
     capabilities: [
       "Vehicle assembly aggregation",
+      "Initial-sale vehicle composition baseline",
       "Serialized component authentication by named users",
+      "Book-off and book-on repair event lifecycle",
       "OEM and approved repairer network evidence",
       "Tiered repairer model for warranty review",
+      "Targeted recall exposure by component-to-vehicle attachment",
       "Outside-network fitment detection",
       "Warranty impact triage against authenticated parts",
+      "Vehicle care history for future buyer confidence",
       "Auditable repair and fitment event trail",
     ],
     suggestedNextBuildSteps: [
       "Register serialized OEM components",
       "Create vehicle assemblies and sub-assemblies",
+      "Seal the initial sale composition for each vehicle",
       "Authenticate component fitments by user and repairer tier",
-      "Seal the expected vehicle assembly snapshot",
+      "Book components off and back on during repair work",
+      "Resolve safety campaigns to vehicles carrying affected components",
       "Record repairs from OEM, approved, tier 2, and outside-network repairers",
       "Detect warranty-sensitive parts fitted outside the repairer network",
       "Present warranty impact evidence to OEM review teams",
@@ -105,6 +196,10 @@ async function main() {
   }));
 
   app.get("/api/v1/assemblies/demo", async () => starterAssembly);
+
+  app.get("/api/v1/repair-events/demo", async () => demoRepairEvent);
+
+  app.get("/api/v1/recalls/demo", async () => demoRecallCampaign);
 
   app.get("/api/v1/inspections/demo", async () => ({
     inspectionId: "insp_demo_0001",

@@ -10,6 +10,9 @@ The platform is built around these core principles:
 - build vehicles and sub-assemblies as aggregations
 - authenticate fitted items by named users
 - classify fitment events by repairer network tier
+- book components off and back on during warranty or repair work
+- focus recalls to vehicles that actually carry affected serialized components
+- preserve care-history evidence for later warranty review and buyer confidence
 - detect parts fitted outside the OEM repairer network
 - support warranty impact review with an auditable evidence trail
 
@@ -33,6 +36,10 @@ The core objects for VINtegrity are:
 - `InspectionItem`: what was observed during that inspection
 - `Repairer`: OEM, approved repairer, tier 2/certified repairer, or outside-network repairer
 - `AuthenticationEvent`: the user-level evidence that a component, repair, or fitment was authenticated
+- `RepairEvent`: the service or warranty job where parts are verified, booked off, and booked back on
+- `RepairEventItem`: the serial-level evidence for each booked-off or booked-on component
+- `SafetyCampaign`: a recall or service campaign targeted by affected component serials
+- `AssemblyCampaignExposure`: the vehicle-level exposure when an affected component is attached to a vehicle
 
 ## Current Starter State
 
@@ -58,6 +65,8 @@ The GitHub repository is:
 2. Register serialized OEM components.
 3. Add components into a vehicle assembly.
 4. Authenticate fitments by user and repairer tier.
-5. Seal the expected assembly snapshot.
-6. Inspect a vehicle later.
-7. Flag warranty-sensitive parts fitted outside the repairer network.
+5. Seal the initial-sale assembly snapshot.
+6. Book components off and back on during repair work.
+7. Resolve recalls to vehicles carrying affected serialized parts.
+8. Inspect a vehicle later.
+9. Flag warranty-sensitive parts fitted outside the repairer network.

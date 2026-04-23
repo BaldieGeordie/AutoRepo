@@ -49,6 +49,7 @@ type TwinComponent = {
   authenticatedBy: string;
   authenticatorRole: string;
   warrantyImpact: string;
+  recallExposure: string;
   x: number;
   y: number;
 };
@@ -63,7 +64,8 @@ const navigation = [
   "Repairer Network",
   "Authenticated Repairs",
   "Warranty Reviews",
-  "Recalls",
+  "Targeted Recalls",
+  "Care History",
   "Verify Fitment",
   "Audit Trail",
   "System Settings",
@@ -75,10 +77,10 @@ const metrics: Array<{ label: string; value: string; delta: string; tone: Tone }
   { label: "Authenticated Parts", value: "241,908", delta: "99.2% verified", tone: "green" },
   { label: "Open Repair Events", value: "184", delta: "42 awaiting auth", tone: "amber" },
   { label: "Outside-network Fits", value: "2,961", delta: "warranty signal", tone: "steel" },
-  { label: "Warranty Reviews", value: "314", delta: "27 high impact", tone: "amber" },
-  { label: "Recall Flags", value: "27", delta: "8 critical", tone: "red" },
+  { label: "Booked Part Changes", value: "8,742", delta: "off/on evidenced", tone: "cyan" },
+  { label: "Focused Recall VINs", value: "27", delta: "8 critical", tone: "red" },
   { label: "OEM Repairers", value: "312", delta: "14 markets", tone: "green" },
-  { label: "Tier 2 Repairers", value: "1,184", delta: "evidence capable", tone: "cyan" },
+  { label: "Care History Score", value: "96.4%", delta: "buyer-visible proof", tone: "green" },
 ];
 
 const statusChips: Array<{ label: string; tone: Tone }> = [
@@ -89,9 +91,11 @@ const statusChips: Array<{ label: string; tone: Tone }> = [
   { label: "Outside Network", tone: "steel" },
   { label: "Authentication Pending", tone: "amber" },
   { label: "Warranty Review", tone: "amber" },
+  { label: "Repair Booked", tone: "cyan" },
   { label: "Owner Fitment Logged", tone: "steel" },
   { label: "Evidence Missing", tone: "red" },
   { label: "Part Replaced", tone: "steel" },
+  { label: "Recall Targeted", tone: "red" },
   { label: "Recall Affected", tone: "red" },
   { label: "Recall Cleared", tone: "green" },
 ];
@@ -153,6 +157,7 @@ const twinComponents: TwinComponent[] = [
     authenticatedBy: "H. Richter",
     authenticatorRole: "OEM release authority",
     warrantyImpact: "No repair-network exception. Vehicle identity is OEM-authenticated.",
+    recallExposure: "No open campaign exposure.",
     x: 50,
     y: 34,
   },
@@ -173,6 +178,7 @@ const twinComponents: TwinComponent[] = [
     authenticatedBy: "A. Walker",
     authenticatorRole: "OEM component release",
     warrantyImpact: "Factory-fit evidence supports normal OEM warranty assessment.",
+    recallExposure: "No open campaign exposure.",
     x: 50,
     y: 64,
   },
@@ -193,6 +199,7 @@ const twinComponents: TwinComponent[] = [
     authenticatedBy: "M. Kaur",
     authenticatorRole: "Approved repairer technician",
     warrantyImpact: "Replacement remains within OEM-supported repairer network.",
+    recallExposure: "No open campaign exposure.",
     x: 24,
     y: 56,
   },
@@ -213,6 +220,7 @@ const twinComponents: TwinComponent[] = [
     authenticatedBy: "Self-declared repair record",
     authenticatorRole: "Non-network workshop",
     warrantyImpact: "OEM can see the ADAS part was fitted outside the repairer network before deciding warranty impact.",
+    recallExposure: "SC-ADAS-27F targets vehicles carrying affected ADAS sensor serials.",
     x: 77,
     y: 42,
   },
@@ -233,6 +241,7 @@ const twinComponents: TwinComponent[] = [
     authenticatedBy: "N. Okafor",
     authenticatorRole: "OEM component release",
     warrantyImpact: "Control module evidence supports warranty diagnostics.",
+    recallExposure: "No open campaign exposure.",
     x: 67,
     y: 60,
   },
@@ -267,6 +276,13 @@ const eventFeed = [
     time: "10:47",
     tone: "steel" as Tone,
   },
+  {
+    event: "Recall exposure focused",
+    subject: "Safety campaign SC-ADAS-27F resolved to vehicles carrying affected ADAS serials",
+    actor: "Recall operations",
+    time: "11:04",
+    tone: "red" as Tone,
+  },
 ];
 
 const custodyStages = [
@@ -275,6 +291,44 @@ const custodyStages = [
   "Tier 2 Repairer",
   "Outside Network",
   "Warranty Review",
+];
+
+const repairLifecycle = [
+  {
+    action: "Verify present",
+    detail: "ADAS-99015-R confirmed against the initial-sale vehicle snapshot.",
+    actor: "M. Kaur · OEM repairer",
+    tone: "green" as Tone,
+  },
+  {
+    action: "Book off",
+    detail: "Faulting ADAS sensor removed from assembly ASM-VEH-WVW184201.",
+    actor: "Service order SO-WTY-184201-044",
+    tone: "cyan" as Tone,
+  },
+  {
+    action: "Book on",
+    detail: "Replacement ADAS-99177-X fitted, but source evidence is outside the OEM network.",
+    actor: "Warranty review required",
+    tone: "amber" as Tone,
+  },
+];
+
+const recallExposure = {
+  campaignCode: "SC-ADAS-27F",
+  title: "ADAS sensor water ingress safety campaign",
+  target: "SENSOR-ADAS-99015 · serial prefix ADAS-99",
+  focusedVehicles: "27",
+  status: "Repair Booked",
+  tone: "red" as Tone,
+};
+
+const careHistory = [
+  "Initial-sale composition sealed for the vehicle.",
+  "Warranty repair opened against a service order and claim reference.",
+  "Part removed from the car is booked off by a named repairer user.",
+  "Replacement fitted to the car is booked on with serial-level evidence.",
+  "Recall exposure clears only when the affected component is removed and replacement evidence is authenticated.",
 ];
 
 function Wordmark() {
@@ -507,6 +561,10 @@ export default function App() {
                       <dd>{selectedComponent.warrantyImpact}</dd>
                     </div>
                     <div>
+                      <dt>Recall exposure</dt>
+                      <dd>{selectedComponent.recallExposure}</dd>
+                    </div>
+                    <div>
                       <dt>Assembly ref</dt>
                       <dd>{selectedVehicle.assemblyRef}</dd>
                     </div>
@@ -572,6 +630,67 @@ export default function App() {
               authenticated by the OEM, an approved repairer, a certified lower-tier repairer, or someone outside the
               repairer network.
             </p>
+          </article>
+
+          <article className="panel repair-panel">
+            <div className="panel-header">
+              <div>
+                <p className="meta-label">Repair lifecycle</p>
+                <h2>Book parts off and back on</h2>
+              </div>
+              <StatusChip label="Repair Booked" tone="cyan" />
+            </div>
+            <div className="lifecycle-list">
+              {repairLifecycle.map((step, index) => (
+                <div className="lifecycle-step" key={step.action}>
+                  <span className={`event-dot ${step.tone}`} />
+                  <div>
+                    <strong>{index + 1}. {step.action}</strong>
+                    <span>{step.detail}</span>
+                    <em>{step.actor}</em>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="panel recall-panel">
+            <div className="panel-header">
+              <div>
+                <p className="meta-label">Targeted recall</p>
+                <h2>Component-to-vehicle exposure</h2>
+              </div>
+              <StatusChip label="Recall Targeted" tone={recallExposure.tone} />
+            </div>
+            <div className="recall-grid">
+              <div>
+                <span>Campaign</span>
+                <strong>{recallExposure.campaignCode}</strong>
+              </div>
+              <div>
+                <span>Focused VINs</span>
+                <strong>{recallExposure.focusedVehicles}</strong>
+              </div>
+            </div>
+            <p className="panel-copy">
+              {recallExposure.title} targets {recallExposure.target}. VINtegrity can focus the campaign on vehicles
+              whose current assembly evidence shows the affected component is actually attached.
+            </p>
+          </article>
+
+          <article className="panel care-panel">
+            <div className="panel-header">
+              <div>
+                <p className="meta-label">Care history</p>
+                <h2>Buyer confidence evidence</h2>
+              </div>
+              <StatusChip label="Recall Cleared" tone="green" />
+            </div>
+            <ol className="care-list">
+              {careHistory.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ol>
           </article>
 
           <article className="panel status-panel">

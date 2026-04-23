@@ -1,50 +1,43 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
 async function purge() {
-  console.log('🗑️  Starting database purge...')
+  console.log("Starting VINtegrity database purge...");
 
-  // Delete in correct order to respect foreign key constraints
-  console.log('Deleting AnchorJobs...')
-  await prisma.anchorJob.deleteMany()
+  const deletePlan = [
+    ["AnchorReceipt", () => prisma.anchorReceipt.deleteMany()],
+    ["AnchorDispatch", () => prisma.anchorDispatch.deleteMany()],
+    ["AssemblyCampaignExposure", () => prisma.assemblyCampaignExposure.deleteMany()],
+    ["CampaignComponentTarget", () => prisma.campaignComponentTarget.deleteMany()],
+    ["SafetyCampaign", () => prisma.safetyCampaign.deleteMany()],
+    ["RepairEventItem", () => prisma.repairEventItem.deleteMany()],
+    ["RepairEvent", () => prisma.repairEvent.deleteMany()],
+    ["InspectionItem", () => prisma.inspectionItem.deleteMany()],
+    ["Inspection", () => prisma.inspection.deleteMany()],
+    ["AuthenticationEvent", () => prisma.authenticationEvent.deleteMany()],
+    ["AssemblySnapshot", () => prisma.assemblySnapshot.deleteMany()],
+    ["AssemblyMembership", () => prisma.assemblyMembership.deleteMany()],
+    ["Component", () => prisma.component.deleteMany()],
+    ["Assembly", () => prisma.assembly.deleteMany()],
+    ["PlatformUser", () => prisma.platformUser.deleteMany()],
+    ["Repairer", () => prisma.repairer.deleteMany()],
+    ["AnchorTarget", () => prisma.anchorTarget.deleteMany()],
+  ] as const;
 
-  console.log('Deleting AnchorTxs...')
-  await prisma.anchorTx.deleteMany()
+  for (const [label, deleteRecords] of deletePlan) {
+    console.log(`Deleting ${label} records...`);
+    await deleteRecords();
+  }
 
-  console.log('Deleting Events...')
-  await prisma.event.deleteMany()
-
-  console.log('Deleting AggregationPacks...')
-  await prisma.aggregationPack.deleteMany()
-
-  console.log('Deleting Aggregations...')
-  await prisma.aggregation.deleteMany()
-
-  console.log('Deleting Packs...')
-  await prisma.pack.deleteMany()
-
-  console.log('Deleting Batches...')
-  await prisma.batch.deleteMany()
-
-  console.log('Deleting Products...')
-  await prisma.product.deleteMany()
-
-  console.log('Deleting Locations...')
-  await prisma.location.deleteMany()
-
-  console.log('Deleting Organisations...')
-  await prisma.organisation.deleteMany()
-
-  console.log('✅ Database purged successfully!')
+  console.log("VINtegrity database purged successfully.");
 }
 
 purge()
-  .catch(e => {
-    console.error('❌ Purge failed:', e)
-    process.exit(1)
+  .catch((error) => {
+    console.error("Purge failed:", error);
+    process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect()
-  })
-  
+    await prisma.$disconnect();
+  });

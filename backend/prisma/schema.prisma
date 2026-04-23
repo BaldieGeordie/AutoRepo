@@ -76,35 +76,75 @@ enum WarrantyImpact {
   UNKNOWN
 }
 
+enum RepairEventStatus {
+  OPEN
+  AWAITING_AUTHENTICATION
+  COMPLETED
+  WARRANTY_REVIEW
+  CANCELLED
+}
+
+enum RepairEventItemAction {
+  BOOK_OFF
+  BOOK_ON
+  VERIFY_PRESENT
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  CLOSED
+}
+
+enum CampaignSeverity {
+  SERVICE_ACTION
+  SAFETY_RECALL
+  CRITICAL_SAFETY
+  SOFTWARE_RECALL
+}
+
+enum CampaignExposureStatus {
+  TARGETED
+  REPAIR_BOOKED
+  CLEARED
+  UNKNOWN
+}
+
 model Component {
-  componentUid         String                @id
-  serial               String                @unique
+  componentUid         String                     @id
+  serial               String                     @unique
   partNumber           String
   manufacturer         String?
   description          String?
-  state                ComponentState        @default(REGISTERED)
-  createdAt            DateTime              @default(now())
+  state                ComponentState             @default(REGISTERED)
+  createdAt            DateTime                   @default(now())
   memberships          AssemblyMembership[]
   inspectionItems      InspectionItem[]
   authenticationEvents AuthenticationEvent[]
+  repairItems          RepairEventItem[]          @relation("RepairItemComponent")
+  replacementItems     RepairEventItem[]          @relation("RepairItemReplacementFor")
+  campaignExposures    AssemblyCampaignExposure[]
 
   @@index([partNumber])
   @@index([manufacturer])
 }
 
 model Assembly {
-  assemblyUid          String                @id
+  assemblyUid          String                     @id
   assetType            String
   label                String
-  status               AssemblyState         @default(DRAFT)
+  status               AssemblyState              @default(DRAFT)
   currentCustodianId   String?
   currentLocationId    String?
-  externalReference    String?               @unique
-  datamatrixPayload    String?               @unique
-  createdAt            DateTime              @default(now())
+  externalReference    String?                    @unique
+  datamatrixPayload    String?                    @unique
+  createdAt            DateTime                   @default(now())
   memberships          AssemblyMembership[]
   snapshots            AssemblySnapshot[]
   inspections          Inspection[]
+  repairEvents         RepairEvent[]
+  campaignExposures    AssemblyCampaignExposure[]
   authenticationEvents AuthenticationEvent[]
 
   @@index([assetType])
@@ -112,16 +152,18 @@ model Assembly {
 }
 
 model AssemblyMembership {
-  id                   String                @id @default(uuid())
+  id                   String                     @id @default(uuid())
   assemblyUid          String
   componentUid         String
   positionLabel        String?
-  addedAt              DateTime              @default(now())
+  addedAt              DateTime                   @default(now())
   removedAt            DateTime?
   expectedRole         String?
-  assembly             Assembly              @relation(fields: [assemblyUid], references: [assemblyUid], onDelete: Cascade)
-  component            Component             @relation(fields: [componentUid], references: [componentUid], onDelete: Cascade)
+  assembly             Assembly                   @relation(fields: [assemblyUid], references: [assemblyUid], onDelete: Cascade)
+  component            Component                  @relation(fields: [componentUid], references: [componentUid], onDelete: Cascade)
   authenticationEvents AuthenticationEvent[]
+  repairEventItems     RepairEventItem[]
+  campaignExposures    AssemblyCampaignExposure[]
 
   @@unique([assemblyUid, componentUid])
   @@index([assemblyUid, removedAt])
@@ -137,6 +179,7 @@ model Repairer {
   oemReference         String?
   createdAt            DateTime              @default(now())
   users                PlatformUser[]
+  repairEvents         RepairEvent[]
   authenticationEvents AuthenticationEvent[]
 
   @@index([tier])
@@ -153,6 +196,8 @@ model PlatformUser {
   repairerId           String?
   createdAt            DateTime              @default(now())
   repairer             Repairer?             @relation(fields: [repairerId], references: [id], onDelete: SetNull)
+  openedRepairEvents   RepairEvent[]         @relation("RepairEventOpenedBy")
+  repairItemAuths      RepairEventItem[]     @relation("RepairItemAuthenticatedBy")
   authenticationEvents AuthenticationEvent[]
 
   @@index([repairerId])
@@ -186,6 +231,115 @@ model AuthenticationEvent {
   @@index([repairerId])
   @@index([networkStatus, warrantyImpact])
   @@index([authenticatedAt])
+}
+
+model RepairEvent {
+  id               String            @id @default(uuid())
+  assemblyUid      String
+  repairerId       String?
+  openedByUserId   String?
+  status           RepairEventStatus @default(OPEN)
+  reason           String
+  warrantyClaimRef String?
+  serviceOrderRef  String?
+  openedAt         DateTime          @default(now())
+  closedAt         DateTime?
+  notes            String?
+  assembly         Assembly          @relation(fields: [assemblyUid], references: [assemblyUid], onDelete: Cascade)
+  repairer         Repairer?         @relation(fields: [repairerId], references: [id], onDelete: SetNull)
+  openedBy         PlatformUser?     @relation("RepairEventOpenedBy", fields: [openedByUserId], references: [id], onDelete: SetNull)
+  items            RepairEventItem[]
+
+  @@index([assemblyUid, openedAt])
+  @@index([repairerId])
+  @@index([openedByUserId])
+  @@index([status])
+  @@index([warrantyClaimRef])
+  @@index([serviceOrderRef])
+}
+
+model RepairEventItem {
+  id                    String                @id @default(uuid())
+  repairEventId         String
+  action                RepairEventItemAction
+  componentUid          String?
+  replacementForUid     String?
+  membershipId          String?
+  positionLabel         String?
+  expectedSerial        String?
+  observedSerial        String?
+  networkStatus         NetworkFitmentStatus
+  warrantyImpact        WarrantyImpact        @default(UNKNOWN)
+  authenticatedByUserId String?
+  authenticatedAt       DateTime?
+  notes                 String?
+  createdAt             DateTime              @default(now())
+  repairEvent           RepairEvent           @relation(fields: [repairEventId], references: [id], onDelete: Cascade)
+  component             Component?            @relation("RepairItemComponent", fields: [componentUid], references: [componentUid], onDelete: SetNull)
+  replacementFor        Component?            @relation("RepairItemReplacementFor", fields: [replacementForUid], references: [componentUid], onDelete: SetNull)
+  membership            AssemblyMembership?   @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  authenticatedBy       PlatformUser?         @relation("RepairItemAuthenticatedBy", fields: [authenticatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([repairEventId])
+  @@index([action])
+  @@index([componentUid])
+  @@index([replacementForUid])
+  @@index([membershipId])
+  @@index([networkStatus, warrantyImpact])
+  @@index([authenticatedByUserId])
+}
+
+model SafetyCampaign {
+  id           String                     @id @default(uuid())
+  campaignCode String                     @unique
+  title        String
+  severity     CampaignSeverity
+  status       CampaignStatus             @default(DRAFT)
+  launchedAt   DateTime?
+  closedAt     DateTime?
+  notes        String?
+  createdAt    DateTime                   @default(now())
+  targets      CampaignComponentTarget[]
+  exposures    AssemblyCampaignExposure[]
+
+  @@index([status, severity])
+  @@index([launchedAt])
+}
+
+model CampaignComponentTarget {
+  id           String         @id @default(uuid())
+  campaignId   String
+  partNumber   String
+  serialPrefix String?
+  description  String?
+  campaign     SafetyCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([partNumber])
+  @@index([serialPrefix])
+}
+
+model AssemblyCampaignExposure {
+  id             String                 @id @default(uuid())
+  campaignId     String
+  assemblyUid    String
+  componentUid   String?
+  membershipId   String?
+  exposureStatus CampaignExposureStatus @default(TARGETED)
+  detectedAt     DateTime               @default(now())
+  clearedAt      DateTime?
+  notes          String?
+  campaign       SafetyCampaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  assembly       Assembly               @relation(fields: [assemblyUid], references: [assemblyUid], onDelete: Cascade)
+  component      Component?             @relation(fields: [componentUid], references: [componentUid], onDelete: SetNull)
+  membership     AssemblyMembership?    @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId])
+  @@index([assemblyUid])
+  @@index([componentUid])
+  @@index([membershipId])
+  @@index([exposureStatus])
+  @@index([detectedAt])
 }
 
 model AssemblySnapshot {
