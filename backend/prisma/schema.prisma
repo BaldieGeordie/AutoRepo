@@ -43,53 +43,149 @@ enum InspectionResult {
   INCOMPLETE
 }
 
+enum RepairerTier {
+  OEM_MANUFACTURING
+  OEM_REPAIRER
+  APPROVED_REPAIRER
+  TIER_2_CERTIFIED
+  OUTSIDE_NETWORK
+  OWNER_SELF_FIT
+}
+
+enum NetworkFitmentStatus {
+  INSIDE_OEM_NETWORK
+  INSIDE_APPROVED_NETWORK
+  CERTIFIED_LOWER_TIER
+  OUTSIDE_NETWORK
+  EVIDENCE_MISSING
+}
+
+enum AuthenticationSubjectType {
+  COMPONENT
+  VEHICLE_ASSEMBLY
+  FITMENT_EVENT
+  REPAIR_EVENT
+  INSPECTION_ITEM
+}
+
+enum WarrantyImpact {
+  NONE
+  REVIEW_REQUIRED
+  WARRANTY_RISK
+  EXCLUDED_FROM_COVERAGE
+  UNKNOWN
+}
+
 model Component {
-  componentUid    String              @id
-  serial          String              @unique
-  partNumber      String
-  manufacturer    String?
-  description     String?
-  state           ComponentState      @default(REGISTERED)
-  createdAt       DateTime            @default(now())
-  memberships     AssemblyMembership[]
-  inspectionItems InspectionItem[]
+  componentUid         String                @id
+  serial               String                @unique
+  partNumber           String
+  manufacturer         String?
+  description          String?
+  state                ComponentState        @default(REGISTERED)
+  createdAt            DateTime              @default(now())
+  memberships          AssemblyMembership[]
+  inspectionItems      InspectionItem[]
+  authenticationEvents AuthenticationEvent[]
 
   @@index([partNumber])
   @@index([manufacturer])
 }
 
 model Assembly {
-  assemblyUid        String               @id
-  assetType          String
-  label              String
-  status             AssemblyState        @default(DRAFT)
-  currentCustodianId String?
-  currentLocationId  String?
-  externalReference  String?              @unique
-  datamatrixPayload  String?              @unique
-  createdAt          DateTime             @default(now())
-  memberships        AssemblyMembership[]
-  snapshots          AssemblySnapshot[]
-  inspections        Inspection[]
+  assemblyUid          String                @id
+  assetType            String
+  label                String
+  status               AssemblyState         @default(DRAFT)
+  currentCustodianId   String?
+  currentLocationId    String?
+  externalReference    String?               @unique
+  datamatrixPayload    String?               @unique
+  createdAt            DateTime              @default(now())
+  memberships          AssemblyMembership[]
+  snapshots            AssemblySnapshot[]
+  inspections          Inspection[]
+  authenticationEvents AuthenticationEvent[]
 
   @@index([assetType])
   @@index([label])
 }
 
 model AssemblyMembership {
-  id           String    @id @default(uuid())
-  assemblyUid  String
-  componentUid String
-  positionLabel String?
-  addedAt      DateTime  @default(now())
-  removedAt    DateTime?
-  expectedRole String?
-  assembly     Assembly  @relation(fields: [assemblyUid], references: [assemblyUid], onDelete: Cascade)
-  component    Component @relation(fields: [componentUid], references: [componentUid], onDelete: Cascade)
+  id                   String                @id @default(uuid())
+  assemblyUid          String
+  componentUid         String
+  positionLabel        String?
+  addedAt              DateTime              @default(now())
+  removedAt            DateTime?
+  expectedRole         String?
+  assembly             Assembly              @relation(fields: [assemblyUid], references: [assemblyUid], onDelete: Cascade)
+  component            Component             @relation(fields: [componentUid], references: [componentUid], onDelete: Cascade)
+  authenticationEvents AuthenticationEvent[]
 
   @@unique([assemblyUid, componentUid])
   @@index([assemblyUid, removedAt])
   @@index([componentUid])
+}
+
+model Repairer {
+  id                   String                @id @default(uuid())
+  name                 String
+  tier                 RepairerTier
+  networkStatus        NetworkFitmentStatus
+  approvedByOem        Boolean               @default(false)
+  oemReference         String?
+  createdAt            DateTime              @default(now())
+  users                PlatformUser[]
+  authenticationEvents AuthenticationEvent[]
+
+  @@index([tier])
+  @@index([networkStatus])
+  @@index([approvedByOem])
+}
+
+model PlatformUser {
+  id                   String                @id @default(uuid())
+  displayName          String
+  email                String?               @unique
+  role                 String
+  organisationName     String?
+  repairerId           String?
+  createdAt            DateTime              @default(now())
+  repairer             Repairer?             @relation(fields: [repairerId], references: [id], onDelete: SetNull)
+  authenticationEvents AuthenticationEvent[]
+
+  @@index([repairerId])
+  @@index([role])
+}
+
+model AuthenticationEvent {
+  id                    String                    @id @default(uuid())
+  subjectType           AuthenticationSubjectType
+  assemblyUid           String?
+  componentUid          String?
+  membershipId          String?
+  authenticatedByUserId String
+  repairerId            String?
+  networkStatus         NetworkFitmentStatus
+  warrantyImpact        WarrantyImpact            @default(UNKNOWN)
+  evidenceHash          String?
+  notes                 String?
+  authenticatedAt       DateTime                  @default(now())
+  assembly              Assembly?                 @relation(fields: [assemblyUid], references: [assemblyUid], onDelete: SetNull)
+  component             Component?                @relation(fields: [componentUid], references: [componentUid], onDelete: SetNull)
+  membership            AssemblyMembership?       @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  authenticatedBy       PlatformUser              @relation(fields: [authenticatedByUserId], references: [id], onDelete: Restrict)
+  repairer              Repairer?                 @relation(fields: [repairerId], references: [id], onDelete: SetNull)
+
+  @@index([subjectType])
+  @@index([assemblyUid])
+  @@index([componentUid])
+  @@index([membershipId])
+  @@index([authenticatedByUserId])
+  @@index([repairerId])
+  @@index([networkStatus, warrantyImpact])
+  @@index([authenticatedAt])
 }
 
 model AssemblySnapshot {

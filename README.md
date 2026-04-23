@@ -1,16 +1,17 @@
 # VINtegrity
 
-VINtegrity is a standalone platform for assembly integrity and blockchain-anchored asset verification.
+VINtegrity is a standalone OEM warranty intelligence platform for authenticated vehicle assemblies.
 
 The repository/workspace name is AutoRepo. The product exists as its own codebase, deployment stack, and operating model.
 
 The platform is built around these core principles:
 
-- serialize physical components
-- build and seal aggregations as assets
-- anchor trusted assembly snapshots to blockchain targets
-- inspect physical assemblies later
-- detect unexpected substitutions, removals, or additions
+- register serialized OEM components
+- build vehicles and sub-assemblies as aggregations
+- authenticate fitted items by named users
+- classify fitment events by repairer network tier
+- detect parts fitted outside the OEM repairer network
+- support warranty impact review with an auditable evidence trail
 
 ## Local Workspace
 
@@ -22,15 +23,16 @@ It is intentionally maintained as a separate product repository.
 
 ## Initial Product Direction
 
-The core objects for AutoRepo are:
+The core objects for VINtegrity are:
 
-- `Component`: a serialized physical part
-- `Assembly`: the aggregate or asset being tracked
-- `AssemblyMembership`: which parts belong in an assembly
-- `AssemblySnapshot`: the expected sealed configuration that gets anchored
-- `Inspection`: a later physical verification of the assembly contents
-- `InspectionItem`: what was actually observed during that inspection
-- `AnchorTarget`, `AnchorDispatch`, `AnchorReceipt`: the chain-target plumbing
+- `Component`: a serialized OEM or replacement part
+- `Assembly`: the vehicle or sub-assembly being tracked
+- `AssemblyMembership`: which parts belong in that vehicle or sub-assembly
+- `AssemblySnapshot`: the expected sealed composition for warranty review
+- `Inspection`: a later vehicle or repair inspection
+- `InspectionItem`: what was observed during that inspection
+- `Repairer`: OEM, approved repairer, tier 2/certified repairer, or outside-network repairer
+- `AuthenticationEvent`: the user-level evidence that a component, repair, or fitment was authenticated
 
 ## Current Starter State
 
@@ -52,12 +54,10 @@ The GitHub repository is:
 
 ## Recommended Next Build Steps
 
-1. Create the new GitHub repo as an empty repository.
-2. Add the new local project as its own git repository.
-3. Push the scaffold.
-4. Build the first vertical slice:
-   - create assembly
-   - add serialized components
-   - seal and hash the expected contents
-   - inspect the physical assembly
-   - show mismatches against the anchored snapshot
+1. Create vehicle and sub-assembly records.
+2. Register serialized OEM components.
+3. Add components into a vehicle assembly.
+4. Authenticate fitments by user and repairer tier.
+5. Seal the expected assembly snapshot.
+6. Inspect a vehicle later.
+7. Flag warranty-sensitive parts fitted outside the repairer network.

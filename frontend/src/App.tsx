@@ -22,7 +22,8 @@ type Tone = "cyan" | "green" | "amber" | "red" | "steel";
 type VehicleRecord = {
   vin: string;
   model: string;
-  dealer: string;
+  repairer: string;
+  repairerTier: string;
   assemblyRef: string;
   owner: string;
   warranty: string;
@@ -43,8 +44,11 @@ type TwinComponent = {
   anchorRef: string;
   standard: string;
   fittedBy: string;
-  approval: string;
-  faultSignal: string;
+  repairerTier: string;
+  networkStatus: string;
+  authenticatedBy: string;
+  authenticatorRole: string;
+  warrantyImpact: string;
   x: number;
   y: number;
 };
@@ -56,74 +60,76 @@ const navigation = [
   "Vehicles",
   "Components",
   "Assemblies",
-  "Approved Dealers",
-  "Service Events",
+  "Repairer Network",
+  "Authenticated Repairs",
+  "Warranty Reviews",
   "Recalls",
-  "Ownership",
-  "Verify",
+  "Verify Fitment",
   "Audit Trail",
   "System Settings",
   "Users",
 ];
 
 const metrics: Array<{ label: string; value: string; delta: string; tone: Tone }> = [
-  { label: "Vehicles Registered", value: "18,420", delta: "+6.4% 30d", tone: "cyan" },
-  { label: "Genuine Components", value: "241,908", delta: "99.2% verified", tone: "green" },
-  { label: "Open Fitment Events", value: "184", delta: "42 pending", tone: "amber" },
-  { label: "Aftermarket Fitments", value: "2,961", delta: "service trace", tone: "steel" },
+  { label: "Warranty Vehicles", value: "18,420", delta: "+6.4% 30d", tone: "cyan" },
+  { label: "Authenticated Parts", value: "241,908", delta: "99.2% verified", tone: "green" },
+  { label: "Open Repair Events", value: "184", delta: "42 awaiting auth", tone: "amber" },
+  { label: "Outside-network Fits", value: "2,961", delta: "warranty signal", tone: "steel" },
+  { label: "Warranty Reviews", value: "314", delta: "27 high impact", tone: "amber" },
   { label: "Recall Flags", value: "27", delta: "8 critical", tone: "red" },
-  { label: "Warranty Reviews", value: "76,114", delta: "+14.8% 30d", tone: "cyan" },
-  { label: "Approved Dealers", value: "312", delta: "14 markets", tone: "green" },
-  { label: "Independent Workshops", value: "1,184", delta: "logged work", tone: "amber" },
+  { label: "OEM Repairers", value: "312", delta: "14 markets", tone: "green" },
+  { label: "Tier 2 Repairers", value: "1,184", delta: "evidence capable", tone: "cyan" },
 ];
 
 const statusChips: Array<{ label: string; tone: Tone }> = [
-  { label: "Verified", tone: "green" },
+  { label: "OEM Authenticated", tone: "green" },
   { label: "Factory Fit", tone: "cyan" },
-  { label: "Approved Fitment", tone: "green" },
-  { label: "Pending Verification", tone: "amber" },
+  { label: "Approved Repairer", tone: "green" },
+  { label: "Tier 2 Repairer", tone: "cyan" },
+  { label: "Outside Network", tone: "steel" },
+  { label: "Authentication Pending", tone: "amber" },
   { label: "Warranty Review", tone: "amber" },
-  { label: "Independent Workshop", tone: "steel" },
   { label: "Owner Fitment Logged", tone: "steel" },
   { label: "Evidence Missing", tone: "red" },
   { label: "Part Replaced", tone: "steel" },
   { label: "Recall Affected", tone: "red" },
   { label: "Recall Cleared", tone: "green" },
-  { label: "Ownership Transferred", tone: "cyan" },
-  { label: "Inspection Required", tone: "amber" },
 ];
 
 const vehicleRecords: VehicleRecord[] = [
   {
     vin: "WVWZZZCD7NW184201",
     model: "ID.7 Pro S",
-    dealer: "Northgate Approved",
+    repairer: "Northgate OEM Service",
+    repairerTier: "OEM repairer",
     assemblyRef: "ASM-VEH-WVW184201",
     owner: "Fleet operator",
     warranty: "Active warranty",
-    status: "Verified",
+    status: "OEM Authenticated",
     tone: "green",
     lastCheck: "2 min ago",
   },
   {
     vin: "SJAAM2ZV8PC019488",
     model: "Continental Hybrid",
-    dealer: "Metro Fleet Service",
+    repairer: "Metro Fleet Service",
+    repairerTier: "Tier 2 repairer",
     assemblyRef: "ASM-VEH-PC019488",
     owner: "Insurer custody",
     warranty: "Warranty review",
-    status: "Pending Verification",
+    status: "Authentication Pending",
     tone: "amber",
     lastCheck: "18 min ago",
   },
   {
     vin: "ZFF95NLA6P0287319",
     model: "Roma Spider",
-    dealer: "Maranello North",
+    repairer: "West Quay Autocare",
+    repairerTier: "Outside network",
     assemblyRef: "ASM-VEH-P0287319",
     owner: "Private owner",
     warranty: "Out of warranty",
-    status: "Service History Review",
+    status: "Outside Network",
     tone: "steel",
     lastCheck: "41 min ago",
   },
@@ -142,8 +148,11 @@ const twinComponents: TwinComponent[] = [
     anchorRef: "snap_vehicle_identity_184201",
     standard: "OEM standard",
     fittedBy: "OEM plant 04",
-    approval: "Factory source verified",
-    faultSignal: "Identity evidence supports warranty and resale provenance review.",
+    repairerTier: "OEM manufacturing",
+    networkStatus: "Inside OEM network",
+    authenticatedBy: "H. Richter",
+    authenticatorRole: "OEM release authority",
+    warrantyImpact: "No repair-network exception. Vehicle identity is OEM-authenticated.",
     x: 50,
     y: 34,
   },
@@ -159,8 +168,11 @@ const twinComponents: TwinComponent[] = [
     anchorRef: "snap_battery_module_10291",
     standard: "OEM standard",
     fittedBy: "OEM plant 04",
-    approval: "Factory source verified",
-    faultSignal: "Warranty claim can be assessed against factory-fit evidence and diagnostics.",
+    repairerTier: "OEM manufacturing",
+    networkStatus: "Inside OEM network",
+    authenticatedBy: "A. Walker",
+    authenticatorRole: "OEM component release",
+    warrantyImpact: "Factory-fit evidence supports normal OEM warranty assessment.",
     x: 50,
     y: 64,
   },
@@ -171,13 +183,16 @@ const twinComponents: TwinComponent[] = [
     serial: "MTR-44721-A",
     partNumber: "MOTOR-AXL-44721",
     fitment: "Approved fitment",
-    status: "Approved Fitment",
+    status: "Approved Repairer",
     tone: "cyan",
     anchorRef: "snap_drive_unit_44721",
     standard: "OEM replacement standard",
-    fittedBy: "Northgate Approved",
-    approval: "Approved dealer fitment",
-    faultSignal: "Dealer-fit component remains inside supported warranty provenance chain.",
+    fittedBy: "Northgate OEM Service",
+    repairerTier: "OEM repairer",
+    networkStatus: "Inside approved repairer network",
+    authenticatedBy: "M. Kaur",
+    authenticatorRole: "Approved repairer technician",
+    warrantyImpact: "Replacement remains within OEM-supported repairer network.",
     x: 24,
     y: 56,
   },
@@ -193,8 +208,11 @@ const twinComponents: TwinComponent[] = [
     anchorRef: "snap_adas_sensor_99015",
     standard: "Aftermarket serial observed",
     fittedBy: "Independent workshop recorded",
-    approval: "Outside approved warranty network",
-    faultSignal: "Warranty claim needs review, while resale history still shows exactly who fitted the part.",
+    repairerTier: "Outside network",
+    networkStatus: "Outside approved warranty network",
+    authenticatedBy: "Self-declared repair record",
+    authenticatorRole: "Non-network workshop",
+    warrantyImpact: "OEM can see the ADAS part was fitted outside the repairer network before deciding warranty impact.",
     x: 77,
     y: 42,
   },
@@ -210,8 +228,11 @@ const twinComponents: TwinComponent[] = [
     anchorRef: "snap_ecu_38114",
     standard: "OEM standard",
     fittedBy: "OEM plant 04",
-    approval: "Factory source verified",
-    faultSignal: "Control module evidence supports warranty diagnostics and service history checks.",
+    repairerTier: "OEM manufacturing",
+    networkStatus: "Inside OEM network",
+    authenticatedBy: "N. Okafor",
+    authenticatorRole: "OEM component release",
+    warrantyImpact: "Control module evidence supports warranty diagnostics.",
     x: 67,
     y: 60,
   },
@@ -219,41 +240,41 @@ const twinComponents: TwinComponent[] = [
 
 const eventFeed = [
   {
-    event: "Register component",
-    subject: "Battery control module BCM-91A-4472",
-    actor: "OEM plant 04",
+    event: "Authenticate component",
+    subject: "Battery module BAT-10291-K authenticated into assembly ASM-VEH-WVW184201",
+    actor: "OEM plant 04 · A. Walker",
     time: "09:42",
     tone: "cyan" as Tone,
   },
   {
-    event: "Independent service logged",
-    subject: "Driver assistance sensor replacement linked to WVWZZZCD7NW184201",
+    event: "Outside-network fitment logged",
+    subject: "Driver assistance sensor replacement linked to warranty review",
     actor: "West Quay Autocare",
     time: "10:18",
     tone: "amber" as Tone,
   },
   {
-    event: "Recall or safety campaign",
-    subject: "Campaign RC-24-089 matched against 27 vehicles",
-    actor: "Safety office",
+    event: "Warranty impact review",
+    subject: "OEM reviewer flagged non-network ADAS fitment before claim decision",
+    actor: "Warranty operations",
     time: "10:31",
     tone: "red" as Tone,
   },
   {
-    event: "Transfer custody",
-    subject: "Vehicle accepted by insurer inspection site",
-    actor: "FleetSure Claims",
+    event: "Tier 2 repair authenticated",
+    subject: "Body control module replacement authenticated by certified repairer",
+    actor: "Metro Fleet Service · J. Patel",
     time: "10:47",
     tone: "steel" as Tone,
   },
 ];
 
 const custodyStages = [
-  "OEM",
-  "Dealer Group",
-  "Workshop",
-  "Insurer",
-  "Fleet Operator",
+  "OEM Build",
+  "OEM Repairer",
+  "Tier 2 Repairer",
+  "Outside Network",
+  "Warranty Review",
 ];
 
 function Wordmark() {
@@ -311,29 +332,29 @@ export default function App() {
           ))}
         </nav>
         <div className="system-card">
-          <p className="meta-label">Network</p>
-          <strong>{meta?.anchorTargets.find((target) => target.primary)?.label || "EVM provenance anchor"}</strong>
-          <span>{meta?.status || "Bootstrapping"} integrity stack</span>
+          <p className="meta-label">Repairer network</p>
+          <strong>OEM warranty evidence</strong>
+          <span>{meta?.status || "Bootstrapping"} aggregation and authentication stack</span>
         </div>
       </aside>
 
       <main className="dashboard">
         <header className="topbar">
           <div>
-            <p className="meta-label">Verified vehicle provenance</p>
-            <h1>Vehicle Integrity Dashboard</h1>
+            <p className="meta-label">OEM warranty intelligence</p>
+            <h1>Repair Network Evidence Dashboard</h1>
             <p className="subtitle">
-              Track verified vehicles, genuine components, warranty-period work, recall exposure, and transparent
-              service provenance from one secure control surface.
+              Track vehicle assemblies, component authentication, repairer network tier, and evidence that shows
+              whether warranty-period parts were fitted inside or outside the OEM repairer network.
             </p>
           </div>
           <div className="header-actions" aria-label="Verification summary">
             <div className="signal">
               <span className="signal-dot" />
-              Live verification
+              Live authentication
             </div>
             <button type="button" className="primary-action">
-              Verify VIN
+              Verify Fitment
             </button>
           </div>
         </header>
@@ -341,7 +362,7 @@ export default function App() {
         <section className="brand-strip" aria-label="Product positioning">
           <div>
             <p className="meta-label">Positioning</p>
-            <strong>Verified vehicle provenance. Genuine parts. Trusted history.</strong>
+            <strong>Aggregation evidence for OEM warranty decisions and repairer-network transparency.</strong>
           </div>
           <div className="vin-plate" aria-label="VIN sample">
             VIN 9C4A-7F21-VERIFIED
@@ -365,8 +386,8 @@ export default function App() {
           <article className="panel twin-panel">
             <div className="panel-header">
               <div>
-                <p className="meta-label">Vehicle Assembly</p>
-                <h2>Digital twin warranty and resale evidence map</h2>
+                <p className="meta-label">Vehicle Aggregation</p>
+                <h2>Digital twin repair-network evidence map</h2>
               </div>
               <StatusChip label={selectedVehicle.status} tone={selectedVehicle.tone} />
             </div>
@@ -426,7 +447,7 @@ export default function App() {
 
               <div className="component-inspector">
                 <div>
-                  <p className="meta-label">Selected Vehicle</p>
+                  <p className="meta-label">Selected Assembly</p>
                   <strong className="inspector-title">{selectedVehicle.model}</strong>
                   <span className="inspector-muted">{selectedVehicle.vin}</span>
                   <span className="inspector-muted">{selectedVehicle.warranty}</span>
@@ -435,7 +456,7 @@ export default function App() {
                 <div className="component-card">
                   <div className="component-card-head">
                     <div>
-                      <p className="meta-label">Linked Component</p>
+                      <p className="meta-label">Authenticated Item</p>
                       <strong>{selectedComponent.label}</strong>
                     </div>
                     <StatusChip label={selectedComponent.status} tone={selectedComponent.tone} />
@@ -458,7 +479,7 @@ export default function App() {
                       <dd>{selectedComponent.role}</dd>
                     </div>
                     <div>
-                      <dt>Fitment state</dt>
+                      <dt>Fitment event</dt>
                       <dd>{selectedComponent.fitment}</dd>
                     </div>
                     <div>
@@ -466,12 +487,24 @@ export default function App() {
                       <dd>{selectedComponent.fittedBy}</dd>
                     </div>
                     <div>
-                      <dt>Approval</dt>
-                      <dd>{selectedComponent.approval}</dd>
+                      <dt>Repairer tier</dt>
+                      <dd>{selectedComponent.repairerTier}</dd>
                     </div>
                     <div>
-                      <dt>Warranty evidence</dt>
-                      <dd>{selectedComponent.faultSignal}</dd>
+                      <dt>Network status</dt>
+                      <dd>{selectedComponent.networkStatus}</dd>
+                    </div>
+                    <div>
+                      <dt>Authenticated by</dt>
+                      <dd>{selectedComponent.authenticatedBy}</dd>
+                    </div>
+                    <div>
+                      <dt>User role</dt>
+                      <dd>{selectedComponent.authenticatorRole}</dd>
+                    </div>
+                    <div>
+                      <dt>Warranty impact</dt>
+                      <dd>{selectedComponent.warrantyImpact}</dd>
                     </div>
                     <div>
                       <dt>Assembly ref</dt>
@@ -491,7 +524,7 @@ export default function App() {
             <div className="panel-header">
               <div>
                 <p className="meta-label">Vehicles</p>
-                <h2>High-confidence vehicle records</h2>
+                <h2>Warranty-period vehicle assemblies</h2>
               </div>
               <StatusChip label="Verified" tone="green" />
             </div>
@@ -508,8 +541,8 @@ export default function App() {
                     <span>{record.model}</span>
                   </div>
                   <div>
-                    <span className="muted">{record.dealer}</span>
-                    <span className="muted">{record.owner} · {record.warranty} · {record.lastCheck}</span>
+                    <span className="muted">{record.repairer}</span>
+                    <span className="muted">{record.repairerTier} · {record.warranty} · {record.lastCheck}</span>
                   </div>
                   <StatusChip label={record.status} tone={record.tone} />
                 </button>
@@ -521,7 +554,7 @@ export default function App() {
             <div className="panel-header">
               <div>
                 <p className="meta-label">Verify</p>
-                <h2>Warranty and resale triage</h2>
+                <h2>Warranty impact triage</h2>
               </div>
             </div>
             <div className="scan-box" aria-hidden="true">
@@ -535,9 +568,9 @@ export default function App() {
               <strong>98.7%</strong>
             </div>
             <p className="panel-copy">
-              VINtegrity does not block owner or independent workshop maintenance. It records the evidence needed to
-              separate warranty-covered manufacturer issues from aftermarket work, missing evidence, or ordinary resale
-              service history.
+              VINtegrity gives OEM teams the evidence trail to understand whether a warranty-period component was
+              authenticated by the OEM, an approved repairer, a certified lower-tier repairer, or someone outside the
+              repairer network.
             </p>
           </article>
 
@@ -558,10 +591,10 @@ export default function App() {
           <article className="panel custody-panel">
             <div className="panel-header">
               <div>
-                <p className="meta-label">Custody</p>
-                <h2>Ownership and service chain</h2>
+                <p className="meta-label">Network path</p>
+                <h2>Repairer tier chain</h2>
               </div>
-              <StatusChip label="Ownership Transferred" tone="cyan" />
+              <StatusChip label="Approved Repairer" tone="green" />
             </div>
             <div className="custody-track">
               {custodyStages.map((stage, index) => (
@@ -577,9 +610,9 @@ export default function App() {
             <div className="panel-header">
               <div>
                 <p className="meta-label">Audit Trail</p>
-                <h2>Provenance-critical activity</h2>
+                <h2>Authentication and repair events</h2>
               </div>
-              <StatusChip label="Inspection Required" tone="amber" />
+              <StatusChip label="Warranty Review" tone="amber" />
             </div>
             <div className="event-feed">
               {eventFeed.map((event) => (
