@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "npm install --prefix ../frontend && npm run build --prefix ../frontend && npx prisma generate && npx tsc",
+    "build": "npm ci --legacy-peer-deps --prefix ../frontend && npm run build --prefix ../frontend && npx prisma generate && npx tsc",
     "deploy:start": "node scripts/run-app-with-migrations.cjs",
     "start": "node dist/server.js",
     "anchor:worker": "tsx src/anchorWorker.ts"

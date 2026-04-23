@@ -1,4 +1,6 @@
 const { spawn } = require("node:child_process");
+const fs = require("node:fs");
+const path = require("node:path");
 const { setTimeout: delay } = require("node:timers/promises");
 
 const DEFAULT_MIGRATION_CONNECTION_LIMIT = 1;
@@ -73,6 +75,14 @@ function runPrismaMigrate(env) {
 
 async function runMigrationsWithRetry() {
   const baseDatabaseUrl = String(process.env.DATABASE_URL ?? "").trim();
+  const migrationsPath = path.resolve(__dirname, "../prisma/migrations");
+  const hasMigrations = fs.existsSync(migrationsPath);
+
+  if (!hasMigrations) {
+    console.warn("[deploy] No Prisma migrations directory found; skipping prisma migrate deploy for starter build");
+    return;
+  }
+
   if (!baseDatabaseUrl) {
     throw new Error("DATABASE_URL environment variable is not set");
   }

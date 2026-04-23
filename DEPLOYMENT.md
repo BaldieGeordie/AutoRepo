@@ -11,6 +11,17 @@ The default shape is:
 - an optional worker mode for asynchronous blockchain anchoring
 - one Postgres database per environment
 
+## Railway
+
+Production project:
+
+- Project URL: `https://railway.com/project/2b93ae87-6345-429d-a263-59ffd013b7ec?environmentId=58188c4c-854f-4e74-b6db-50aec9e95b3d`
+- Project ID: `2b93ae87-6345-429d-a263-59ffd013b7ec`
+- Environment: `production`
+- Environment ID: `58188c4c-854f-4e74-b6db-50aec9e95b3d`
+
+The starter build can run before the first Prisma migration exists. Once migrations are added, API startup expects `DATABASE_URL` to be present and runs `prisma migrate deploy`.
+
 ## Runtime Modes
 
 - API mode:

@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install frontend deps and build
 COPY frontend/package*.json ./frontend/
-RUN cd frontend && npm install
+RUN cd frontend && npm ci --legacy-peer-deps
 
 COPY frontend/ ./frontend/
 RUN cd frontend && npm run build
@@ -12,7 +12,7 @@ RUN cd frontend && npm run build
 # Install backend deps
 COPY backend/package*.json ./backend/
 COPY backend/prisma ./backend/prisma/
-RUN cd backend && npm install --include=dev
+RUN cd backend && npm ci --include=dev
 
 # Build backend
 COPY backend/ ./backend/

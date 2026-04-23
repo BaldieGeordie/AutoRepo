@@ -16,11 +16,11 @@ const startedAt = new Date().toISOString();
 
 const starterAssembly = {
   assemblyUid: "ASM-DEMO-0001",
-  assetType: "DRIVE_UNIT",
-  label: "Front axle drive unit",
+  assetType: "VEHICLE",
+  label: "Verified demonstrator vehicle",
   status: "SEALED",
-  currentCustodianId: "org-demo-integrator",
-  currentLocationId: "loc-demo-bay-4",
+  currentCustodianId: "oem-demo-plant-04",
+  currentLocationId: "approved-dealer-northgate",
   componentCount: 4,
   anchoredSnapshot: {
     snapshotRef: "snap_demo_expected_0001",
@@ -28,10 +28,10 @@ const starterAssembly = {
     targetLabel: "EVM dev target",
   },
   expectedComponents: [
-    { serial: "MTR-44721-A", partNumber: "MOTOR-AXL-44721", positionLabel: "motor" },
-    { serial: "INV-10291-K", partNumber: "INVERTER-10291", positionLabel: "inverter" },
-    { serial: "SNS-99014-Q", partNumber: "SENSOR-99014", positionLabel: "sensor-a" },
-    { serial: "SNS-99015-R", partNumber: "SENSOR-99015", positionLabel: "sensor-b" },
+    { serial: "VIN-WVWZZZCD7NW184201", partNumber: "VEHICLE-RECORD", positionLabel: "vehicle" },
+    { serial: "MTR-44721-A", partNumber: "MOTOR-AXL-44721", positionLabel: "front-drive-unit" },
+    { serial: "BAT-10291-K", partNumber: "BATTERY-MODULE-10291", positionLabel: "battery-module" },
+    { serial: "ADAS-99015-R", partNumber: "SENSOR-ADAS-99015", positionLabel: "driver-assist-sensor" },
   ],
 };
 
@@ -49,20 +49,27 @@ async function main() {
   app.get("/api/v1/meta", async () => ({
     product: {
       name: "VINtegrity",
-      tagline: "Assembly integrity and blockchain-anchored verification",
+      tagline: "Verified vehicle provenance. Genuine parts. Trusted history.",
     },
     status: "starter",
     capabilities: [
-      "Serialized component registry",
-      "Assembly composition tracking",
-      "Anchored assembly snapshots",
-      "Later inspection and mismatch detection",
+      "Verified vehicle provenance",
+      "Genuine component registry",
+      "Approved fitment tracking",
+      "Recall and safety campaign exposure",
+      "Custody transfer and acceptance",
+      "Warranty-period fault triage",
+      "Independent workshop and owner-fit evidence capture",
+      "Transparent service provenance for resale",
     ],
     suggestedNextBuildSteps: [
-      "Create assemblies and add serialized components",
-      "Seal an expected assembly snapshot and queue it for anchoring",
-      "Capture inspection observations from a physical asset",
-      "Compare anchored state against observed contents",
+      "Register genuine serialized components",
+      "Create vehicle and assembly records",
+      "Fit approved components into a vehicle assembly",
+      "Seal the expected vehicle provenance snapshot",
+      "Capture inspection observations from a workshop or dealer site",
+      "Compare warranty-sensitive evidence against observed vehicle contents",
+      "Expose service history clearly for future buyers",
     ],
     anchorTargets: [
       { targetKey: "evm-dev", label: "EVM dev target", kind: "EVM", enabled: true, primary: true },
@@ -76,16 +83,16 @@ async function main() {
     inspectionId: "insp_demo_0001",
     assemblyUid: starterAssembly.assemblyUid,
     result: "MISMATCH",
-    summary: "One serialized sensor does not match the anchored expected configuration.",
+    summary: "One fitted driver assistance sensor differs from the trusted vehicle provenance snapshot and needs warranty-context review.",
     observations: [
-      { positionLabel: "motor", observedSerial: "MTR-44721-A", matched: true },
-      { positionLabel: "inverter", observedSerial: "INV-10291-K", matched: true },
-      { positionLabel: "sensor-a", observedSerial: "SNS-99014-Q", matched: true },
+      { positionLabel: "vehicle", observedSerial: "VIN-WVWZZZCD7NW184201", matched: true },
+      { positionLabel: "front-drive-unit", observedSerial: "MTR-44721-A", matched: true },
+      { positionLabel: "battery-module", observedSerial: "BAT-10291-K", matched: true },
       {
-        positionLabel: "sensor-b",
-        observedSerial: "SNS-99177-X",
+        positionLabel: "driver-assist-sensor",
+        observedSerial: "ADAS-99177-X",
         matched: false,
-        varianceReason: "Unexpected replacement part detected",
+        varianceReason: "Aftermarket or independently fitted component requires warranty review",
       },
     ],
   }));
