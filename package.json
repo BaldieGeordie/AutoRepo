@@ -1,0 +1,10 @@
+{
+  "name": "autorepo-workspace",
+  "private": true,
+  "devDependencies": {
+    "@types/node": "^25.3.2"
+  },
+  "scripts": {
+    "check:no-tracked-env": "node scripts/check-no-tracked-env.mjs"
+  }
+}

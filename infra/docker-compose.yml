@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    container_name: bpp_db
+    environment:
+      POSTGRES_USER: bpp
+      POSTGRES_PASSWORD: bpp_password
+      POSTGRES_DB: bpp
+    ports:
+      - "5432:5432"
+    volumes:
+      - bpp_pgdata:/var/lib/postgresql/data
+
+volumes:
+  bpp_pgdata:

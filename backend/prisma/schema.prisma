@@ -1,0 +1,197 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AnchorTargetKind {
+  EVM
+  SOLANA
+}
+
+enum AnchorDispatchStatus {
+  PENDING
+  CLAIMED
+  SUBMITTED
+  CONFIRMED
+  FAILED_RETRYABLE
+  FAILED_FINAL
+}
+
+enum AssemblyState {
+  DRAFT
+  SEALED
+  IN_SERVICE
+  OPENED
+  MISMATCHED
+  RETIRED
+}
+
+enum ComponentState {
+  REGISTERED
+  INSTALLED
+  REMOVED
+  RETIRED
+}
+
+enum InspectionResult {
+  MATCH
+  MISMATCH
+  INCOMPLETE
+}
+
+model Component {
+  componentUid    String              @id
+  serial          String              @unique
+  partNumber      String
+  manufacturer    String?
+  description     String?
+  state           ComponentState      @default(REGISTERED)
+  createdAt       DateTime            @default(now())
+  memberships     AssemblyMembership[]
+  inspectionItems InspectionItem[]
+
+  @@index([partNumber])
+  @@index([manufacturer])
+}
+
+model Assembly {
+  assemblyUid        String               @id
+  assetType          String
+  label              String
+  status             AssemblyState        @default(DRAFT)
+  currentCustodianId String?
+  currentLocationId  String?
+  externalReference  String?              @unique
+  datamatrixPayload  String?              @unique
+  createdAt          DateTime             @default(now())
+  memberships        AssemblyMembership[]
+  snapshots          AssemblySnapshot[]
+  inspections        Inspection[]
+
+  @@index([assetType])
+  @@index([label])
+}
+
+model AssemblyMembership {
+  id           String    @id @default(uuid())
+  assemblyUid  String
+  componentUid String
+  positionLabel String?
+  addedAt      DateTime  @default(now())
+  removedAt    DateTime?
+  expectedRole String?
+  assembly     Assembly  @relation(fields: [assemblyUid], references: [assemblyUid], onDelete: Cascade)
+  component    Component @relation(fields: [componentUid], references: [componentUid], onDelete: Cascade)
+
+  @@unique([assemblyUid, componentUid])
+  @@index([assemblyUid, removedAt])
+  @@index([componentUid])
+}
+
+model AssemblySnapshot {
+  snapshotRef     String           @id @default(cuid())
+  assemblyUid     String
+  snapshotType    String           @default("EXPECTED_CONFIGURATION")
+  contentHash     String           @unique
+  componentCount  Int
+  createdAt       DateTime         @default(now())
+  createdByUserId String?
+  createdByOrgId  String?
+  assembly        Assembly         @relation(fields: [assemblyUid], references: [assemblyUid], onDelete: Cascade)
+  dispatches      AnchorDispatch[]
+
+  @@index([assemblyUid, createdAt])
+}
+
+model Inspection {
+  id              String           @id @default(uuid())
+  assemblyUid     String
+  result          InspectionResult @default(INCOMPLETE)
+  inspectorUserId String?
+  inspectorOrgId  String?
+  notes           String?
+  observedHash    String?
+  inspectedAt     DateTime         @default(now())
+  assembly        Assembly         @relation(fields: [assemblyUid], references: [assemblyUid], onDelete: Cascade)
+  items           InspectionItem[]
+
+  @@index([assemblyUid, inspectedAt])
+}
+
+model InspectionItem {
+  id             String     @id @default(uuid())
+  inspectionId   String
+  componentUid   String?
+  observedSerial String
+  positionLabel  String?
+  matched        Boolean    @default(false)
+  varianceReason String?
+  inspection     Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  component      Component? @relation(fields: [componentUid], references: [componentUid], onDelete: SetNull)
+
+  @@index([inspectionId])
+  @@index([observedSerial])
+}
+
+model AnchorTarget {
+  targetKey       String           @id
+  label           String
+  targetKind      AnchorTargetKind
+  networkName     String?
+  chainId         Int?
+  contractAddress String?
+  programId       String?
+  explorerBaseUrl String?
+  enabled         Boolean          @default(true)
+  isPrimary       Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  dispatches      AnchorDispatch[]
+  receipts        AnchorReceipt[]
+
+  @@index([enabled])
+  @@index([targetKind])
+}
+
+model AnchorDispatch {
+  id            String               @id @default(uuid())
+  snapshotRef   String
+  targetKey     String
+  status        AnchorDispatchStatus @default(PENDING)
+  attempts      Int                  @default(0)
+  nextAttemptAt DateTime?
+  queuedAt      DateTime             @default(now())
+  claimedAt     DateTime?
+  completedAt   DateTime?
+  lastError     String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  snapshot      AssemblySnapshot     @relation(fields: [snapshotRef], references: [snapshotRef], onDelete: Cascade)
+  target        AnchorTarget         @relation(fields: [targetKey], references: [targetKey], onDelete: Cascade)
+  receipt       AnchorReceipt?
+
+  @@unique([snapshotRef, targetKey])
+  @@index([targetKey, status, nextAttemptAt, queuedAt])
+}
+
+model AnchorReceipt {
+  id               String         @id @default(uuid())
+  dispatchId       String         @unique
+  targetKey        String
+  submissionRef    String?        @unique
+  transactionRef   String?        @unique
+  blockHeight      Int?
+  slot             Int?
+  anchoredAt       DateTime?
+  submitLatencyMs  Int?
+  confirmLatencyMs Int?
+  createdAt        DateTime       @default(now())
+  dispatch         AnchorDispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+  target           AnchorTarget   @relation(fields: [targetKey], references: [targetKey], onDelete: Cascade)
+
+  @@index([targetKey, anchoredAt])
+}

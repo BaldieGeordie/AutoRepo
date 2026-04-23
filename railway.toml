@@ -1,0 +1,7 @@
+[build]
+builder = "dockerfile"
+
+[deploy]
+startCommand = 'sh -lc "if [ \"$RUN_ANCHOR_WORKER\" = \"1\" ]; then npm run anchor:worker; else npm run deploy:start; fi"'
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

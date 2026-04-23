@@ -1,0 +1,27 @@
+{
+  "name": "autorepo-backend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "npm install --prefix ../frontend && npm run build --prefix ../frontend && npx prisma generate && npx tsc",
+    "deploy:start": "node scripts/run-app-with-migrations.cjs",
+    "start": "node dist/server.js",
+    "anchor:worker": "tsx src/anchorWorker.ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^8.0.0",
+    "@fastify/static": "^7.0.4",
+    "@prisma/client": "^6.19.1",
+    "dotenv": "^17.2.3",
+    "ethers": "^6.16.0",
+    "fastify": "^4.29.1",
+    "prisma": "^6.19.1",
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.35",
+    "tsx": "^4.20.0",
+    "typescript": "^5.4.0"
+  }
+}
