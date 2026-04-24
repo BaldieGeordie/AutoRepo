@@ -1240,7 +1240,7 @@ button {
   grid-template-columns: auto minmax(0, 1fr);
   gap: 12px;
   align-items: start;
-  min-height: 116px;
+  min-height: 94px;
   border: 1px solid rgba(42, 52, 70, 0.72);
   border-radius: 8px;
   padding: 12px;
@@ -1257,6 +1257,128 @@ button {
 
 .workflow-card.selected {
   box-shadow: inset 3px 0 0 var(--verified-cyan);
+}
+
+.workflow-stage-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.workflow-stage {
+  position: relative;
+  min-height: 150px;
+  border: 1px solid rgba(42, 52, 70, 0.78);
+  border-radius: 8px;
+  padding: 13px;
+  background:
+    linear-gradient(180deg, rgba(24, 33, 50, 0.62), rgba(7, 10, 15, 0.58)),
+    rgba(7, 10, 15, 0.42);
+}
+
+.workflow-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: 8px 0 0 8px;
+  background: var(--gunmetal-line);
+}
+
+.workflow-stage.cyan::after {
+  background: var(--verified-cyan);
+}
+
+.workflow-stage.green::after {
+  background: var(--verified-green);
+}
+
+.workflow-stage.amber::after {
+  background: var(--amber-alert);
+}
+
+.workflow-stage.red::after {
+  background: var(--recall-red);
+}
+
+.workflow-stage-label,
+.workflow-stage strong,
+.workflow-stage p {
+  display: block;
+}
+
+.workflow-stage-label {
+  color: var(--slate-grey);
+  font-size: 0.68rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.workflow-stage strong {
+  margin-top: 10px;
+  color: var(--ice-white);
+  font-size: 0.94rem;
+  overflow-wrap: anywhere;
+}
+
+.workflow-stage p {
+  margin: 8px 0 0;
+  color: var(--cool-grey);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.fitment-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr) 34px minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.fitment-step {
+  min-height: 118px;
+  border: 1px solid rgba(42, 52, 70, 0.78);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(7, 10, 15, 0.36);
+}
+
+.fitment-step.emphasis {
+  border-color: rgba(25, 211, 197, 0.5);
+  background: rgba(25, 211, 197, 0.08);
+}
+
+.fitment-step .meta-label {
+  margin: 0;
+}
+
+.fitment-step strong,
+.fitment-step span {
+  display: block;
+}
+
+.fitment-step strong {
+  margin-top: 12px;
+  color: var(--ice-white);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.fitment-step span {
+  margin-top: 8px;
+  color: var(--cool-grey);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.fitment-arrow {
+  display: grid;
+  place-items: center;
+  color: var(--verified-cyan);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 1.2rem;
+  font-weight: 900;
 }
 
 .workflow-card-meta {
@@ -1408,6 +1530,7 @@ button {
   }
 
   .vin-context-grid,
+  .workflow-stage-grid,
   .workspace-grid {
     grid-template-columns: 1fr;
   }
@@ -1457,10 +1580,16 @@ button {
   .scan-comparison,
   .scan-decision-grid,
   .workflow-evidence-grid,
+  .fitment-flow,
   .directory-toolbar,
   .tree-row,
   .workflow-card {
     grid-template-columns: 1fr;
+  }
+
+  .fitment-arrow {
+    min-height: 24px;
+    transform: rotate(90deg);
   }
 
   .workflow-headline {
@@ -1475,7 +1604,8 @@ button {
     padding: 12px !important;
   }
 
-  .tree-marker,
+  .tree-toggle,
+  .tree-toggle-placeholder,
   .tree-serial {
     display: none;
   }

@@ -1036,9 +1036,9 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [treeError, setTreeError] = useState<string | null>(null);
   const [workflowError, setWorkflowError] = useState<string | null>(null);
-  const [selectedNodeId, setSelectedNodeId] = useState("asm-engine");
+  const [selectedNodeId, setSelectedNodeId] = useState(repairWorkflowScenarios[0].assemblyNodeId);
   const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(() =>
-    getExpandedIdsForNode(demoAggregationRoot, "asm-engine"),
+    getExpandedIdsForNode(demoAggregationRoot, repairWorkflowScenarios[0].assemblyNodeId),
   );
   const [directoryQuery, setDirectoryQuery] = useState("");
   const [activeWorkflowId, setActiveWorkflowId] = useState(repairWorkflowScenarios[0].id);
@@ -1055,6 +1055,38 @@ export default function App() {
   const leafCount = useMemo(() => countLeafNodes(aggregationRoot), [aggregationRoot]);
   const activeWorkflow =
     workflowScenarios.find((workflow) => workflow.id === activeWorkflowId) || workflowScenarios[0];
+  const workflowStages = [
+    {
+      label: "1. Select component",
+      title: selectedNode.label,
+      detail: selectedNode.path,
+      tone: selectedNode.tone,
+    },
+    {
+      label: "2. Scan removed part",
+      title: activeWorkflow.scannedSerial,
+      detail: activeWorkflow.scanDecision,
+      tone: activeWorkflow.scanOutcome === "ORIGINAL_MATCH" ? "green" as Tone : activeWorkflow.tone,
+    },
+    {
+      label: "3. Choose action",
+      title: activeWorkflow.serviceRoute,
+      detail: activeWorkflow.recommendedAction,
+      tone: activeWorkflow.tone,
+    },
+    {
+      label: "4. Confirm fitted serial",
+      title: activeWorkflow.finalFitmentSerial,
+      detail: activeWorkflow.vehicleStateAfterWork,
+      tone: activeWorkflow.tone,
+    },
+    {
+      label: "5. Commit evidence",
+      title: warrantyLabel(activeWorkflow.warrantyImpact),
+      detail: activeWorkflow.networkFitmentEvidence,
+      tone: activeWorkflow.tone,
+    },
+  ];
 
   function toggleNodeExpanded(nodeId: string) {
     setExpandedNodeIds((current) => {
@@ -1379,13 +1411,131 @@ export default function App() {
             </div>
           </article>
 
+          <article className="panel repair-panel" id="repair-workflow">
+            <div className="panel-header">
+              <div>
+                <p className="meta-label">Technician workflow</p>
+                <h2>Book parts off and back on</h2>
+              </div>
+              <StatusChip label={activeWorkflow.currentStatus} tone={activeWorkflow.tone} />
+            </div>
+            <div className="workflow-layout">
+              <div className="workflow-switcher" aria-label="Workflow route selector">
+                {workflowScenarios.map((workflow) => (
+                  <button
+                    type="button"
+                    key={workflow.id}
+                    className={`workflow-card ${workflow.id === activeWorkflow.id ? "selected" : ""}`}
+                    aria-pressed={workflow.id === activeWorkflow.id}
+                    onClick={() => {
+                      setActiveWorkflowId(workflow.id);
+                      revealNode(workflow.assemblyNodeId);
+                    }}
+                  >
+                    <span className={`event-dot ${workflow.tone}`} />
+                    <div>
+                      <strong>{workflow.serviceRoute}</strong>
+                      <span>{workflow.title}</span>
+                      <div className="workflow-card-meta">
+                        <StatusChip label={workflow.currentStatus} tone={workflow.tone} />
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="workflow-stage-grid" aria-label="Replace component workflow steps">
+                {workflowStages.map((stage) => (
+                  <div className={`workflow-stage ${stage.tone}`} key={stage.label}>
+                    <span className="workflow-stage-label">{stage.label}</span>
+                    <strong>{stage.title}</strong>
+                    <p>{stage.detail}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="fitment-flow" aria-label="Book off and book on sequence">
+                <div className="fitment-step">
+                  <p className="meta-label">Book off current fitted item</p>
+                  <strong>{activeWorkflow.scannedSerial}</strong>
+                  <span>Removed from {selectedNode.label}</span>
+                </div>
+                <div className="fitment-arrow" aria-hidden="true">-&gt;</div>
+                <div className="fitment-step emphasis">
+                  <p className="meta-label">{activeWorkflow.finalFitmentLabel}</p>
+                  <strong>{activeWorkflow.finalFitmentSerial}</strong>
+                  <span>{activeWorkflow.serviceRoute}</span>
+                </div>
+                <div className="fitment-arrow" aria-hidden="true">-&gt;</div>
+                <div className="fitment-step">
+                  <p className="meta-label">Updated VIN record</p>
+                  <strong>{warrantyLabel(activeWorkflow.warrantyImpact)}</strong>
+                  <span>{activeWorkflow.vehicleStateAfterWork}</span>
+                </div>
+              </div>
+
+              <div className="workflow-detail">
+                <div className="workflow-headline">
+                  <div>
+                    <p className="meta-label">Selected route</p>
+                    <strong>{activeWorkflow.title}</strong>
+                    <span>{activeWorkflow.recommendedAction}</span>
+                  </div>
+                  <StatusChip label={warrantyLabel(activeWorkflow.warrantyImpact)} tone={activeWorkflow.tone} />
+                </div>
+
+                <div className="workflow-evidence-grid" aria-label="Repair evidence summary">
+                  <div>
+                    <span>Expected off</span>
+                    <strong>{activeWorkflow.expectedSerial}</strong>
+                  </div>
+                  <div>
+                    <span>Removed scan</span>
+                    <strong>{activeWorkflow.scannedSerial}</strong>
+                  </div>
+                  <div>
+                    <span>Fitment route</span>
+                    <strong>{activeWorkflow.serviceRoute}</strong>
+                  </div>
+                  <div>
+                    <span>{activeWorkflow.finalFitmentLabel}</span>
+                    <strong>{activeWorkflow.finalFitmentSerial}</strong>
+                  </div>
+                </div>
+
+                <div className="lifecycle-list">
+                  {activeWorkflow.steps.map((step, index) => (
+                    <div className="lifecycle-step" key={step.label}>
+                      <span className={`event-dot ${step.tone}`} />
+                      <div>
+                        <strong>{index + 1}. {step.label}</strong>
+                        <span>{step.detail}</span>
+                        <em>{activeWorkflow.shipmentTrace.status}</em>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="evidence-box">
+                  <p className="meta-label">Modification log</p>
+                  <ol className="care-list">
+                    {activeWorkflow.evidenceLog.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+            </div>
+            {workflowError && <p className="error">Backend workflow unavailable: {workflowError}</p>}
+          </article>
+
           <article className="panel verify-panel" id="scan-verify">
             <div className="panel-header">
               <div>
                 <p className="meta-label">Scan and verify</p>
-                <h2>Removed-part scan and fitment decision</h2>
+                <h2>Removed-part scan evidence</h2>
               </div>
-              <StatusChip label={activeWorkflow.serviceRoute} tone={activeWorkflow.tone} />
+              <StatusChip label={activeWorkflow.scanOutcome.replace(/_/g, " ")} tone={activeWorkflow.tone} />
             </div>
             <div className="scan-box" aria-hidden="true">
               <span />
@@ -1446,94 +1596,6 @@ export default function App() {
             <p className="panel-copy">
               {activeWorkflow.summary}
             </p>
-          </article>
-
-          <article className="panel repair-panel" id="repair-workflow">
-            <div className="panel-header">
-              <div>
-                <p className="meta-label">Technician workflow</p>
-                <h2>Book parts off and back on</h2>
-              </div>
-              <StatusChip label={activeWorkflow.currentStatus} tone={activeWorkflow.tone} />
-            </div>
-            <div className="workflow-layout">
-              <div className="workflow-switcher" aria-label="Warranty workflow scenarios">
-                {workflowScenarios.map((workflow) => (
-                  <button
-                    type="button"
-                    key={workflow.id}
-                    className={`workflow-card ${workflow.id === activeWorkflow.id ? "selected" : ""}`}
-                    aria-pressed={workflow.id === activeWorkflow.id}
-                    onClick={() => {
-                      setActiveWorkflowId(workflow.id);
-                      revealNode(workflow.assemblyNodeId);
-                    }}
-                  >
-                    <span className={`event-dot ${workflow.tone}`} />
-                    <div>
-                      <strong>{workflow.title}</strong>
-                      <span>{workflow.summary}</span>
-                      <div className="workflow-card-meta">
-                        <StatusChip label={workflow.currentStatus} tone={workflow.tone} />
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              <div className="workflow-detail">
-                <div className="workflow-headline">
-                  <div>
-                    <p className="meta-label">Active repair file</p>
-                    <strong>{activeWorkflow.title}</strong>
-                    <span>{activeWorkflow.recommendedAction}</span>
-                  </div>
-                  <StatusChip label={warrantyLabel(activeWorkflow.warrantyImpact)} tone={activeWorkflow.tone} />
-                </div>
-
-                <div className="workflow-evidence-grid" aria-label="Repair evidence summary">
-                  <div>
-                    <span>Expected off</span>
-                    <strong>{activeWorkflow.expectedSerial}</strong>
-                  </div>
-                  <div>
-                    <span>Removed scan</span>
-                    <strong>{activeWorkflow.scannedSerial}</strong>
-                  </div>
-                  <div>
-                    <span>Fitment route</span>
-                    <strong>{activeWorkflow.serviceRoute}</strong>
-                  </div>
-                  <div>
-                    <span>{activeWorkflow.finalFitmentLabel}</span>
-                    <strong>{activeWorkflow.finalFitmentSerial}</strong>
-                  </div>
-                </div>
-
-                <div className="lifecycle-list">
-                  {activeWorkflow.steps.map((step, index) => (
-                    <div className="lifecycle-step" key={step.label}>
-                      <span className={`event-dot ${step.tone}`} />
-                      <div>
-                        <strong>{index + 1}. {step.label}</strong>
-                        <span>{step.detail}</span>
-                        <em>{activeWorkflow.shipmentTrace.status}</em>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="evidence-box">
-                  <p className="meta-label">Modification log</p>
-                  <ol className="care-list">
-                    {activeWorkflow.evidenceLog.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ol>
-                </div>
-              </div>
-            </div>
-            {workflowError && <p className="error">Backend workflow unavailable: {workflowError}</p>}
           </article>
 
           <article className="panel recall-panel" id="targeted-recalls">
