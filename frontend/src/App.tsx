@@ -63,6 +63,7 @@ type TreeRow = AggregationNode & {
   depth: number;
   path: string;
   childCount: number;
+  isExpanded: boolean;
 };
 
 type WorkflowStep = {
@@ -81,6 +82,14 @@ type WarrantyWorkflow = {
   expectedSerial: string;
   scannedSerial: string;
   replacementSerial: string;
+  serviceRoute: string;
+  scanDecision: string;
+  finalFitmentLabel: string;
+  finalFitmentSerial: string;
+  vehicleStateAfterWork: string;
+  partAuthenticity: string;
+  loggedToVinBaseline: boolean;
+  networkFitmentEvidence: string;
   partNumber: string;
   scanOutcome: string;
   oemPartRecognised: boolean;
@@ -624,6 +633,14 @@ const repairWorkflowScenarios: WarrantyWorkflow[] = [
     expectedSerial: "ADAS-99015-R",
     scannedSerial: "ADAS-99015-R",
     replacementSerial: "ADAS-99177-OEM",
+    serviceRoute: "Replace component",
+    scanDecision: "Original part verified; replacement authorised.",
+    finalFitmentLabel: "Replacement on",
+    finalFitmentSerial: "ADAS-99177-OEM",
+    vehicleStateAfterWork: "Original ADAS-99015-R booked off; replacement ADAS-99177-OEM booked on.",
+    partAuthenticity: "Original to this VIN",
+    loggedToVinBaseline: true,
+    networkFitmentEvidence: "Original factory fit; replacement fitted by OEM repairer.",
     partNumber: "SENSOR-ADAS-99015",
     scanOutcome: "ORIGINAL_MATCH",
     oemPartRecognised: true,
@@ -665,6 +682,64 @@ const repairWorkflowScenarios: WarrantyWorkflow[] = [
     ],
   },
   {
+    id: "original-part-refit",
+    title: "Original part re-fitted",
+    tone: "cyan",
+    assemblyNodeId: "part-adas-sensor",
+    currentStatus: "Ready to re-fit original",
+    summary: "Removed part scan matches the VIN baseline and the technician decides the original can be re-fitted.",
+    expectedSerial: "ADAS-99015-R",
+    scannedSerial: "ADAS-99015-R",
+    replacementSerial: "ADAS-99015-R",
+    serviceRoute: "Re-fit original",
+    scanDecision: "Original part verified; no replacement needed.",
+    finalFitmentLabel: "Original re-fitted",
+    finalFitmentSerial: "ADAS-99015-R",
+    vehicleStateAfterWork: "Original ADAS-99015-R is re-fitted to the same assembly node after inspection.",
+    partAuthenticity: "Original to this VIN",
+    loggedToVinBaseline: true,
+    networkFitmentEvidence: "Original factory fit; same serial re-fitted by OEM repairer.",
+    partNumber: "SENSOR-ADAS-99015",
+    scanOutcome: "ORIGINAL_MATCH",
+    oemPartRecognised: true,
+    shipmentTrace: {
+      status: "Original factory fit",
+      shippedTo: "OEM plant 04",
+      repairerTier: "OEM manufacturing",
+      networkStatus: "Inside OEM network",
+    },
+    warrantyImpact: "None",
+    recommendedAction:
+      "Record the removed-part scan, re-fit the same authenticated original component, and close the job with no component substitution.",
+    steps: [
+      {
+        label: "Open VIN file",
+        detail: "Vehicle file shows ADAS-99015-R as the sealed original component.",
+        tone: "cyan",
+      },
+      {
+        label: "Remove and scan",
+        detail: "Technician removes ADAS-99015-R and scan confirms it is the expected original.",
+        tone: "green",
+      },
+      {
+        label: "Decide re-fit",
+        detail: "Fault is not linked to component substitution, so no replacement part is consumed.",
+        tone: "cyan",
+      },
+      {
+        label: "Book original back on",
+        detail: "The same serial is re-fitted to the same tree position with technician evidence.",
+        tone: "green",
+      },
+    ],
+    evidenceLog: [
+      "Original component confirmed against initial-sale snapshot.",
+      "No replacement serial consumed for this service order.",
+      "Original component re-fitted and retained as the current part on the VIN file.",
+    ],
+  },
+  {
     id: "mismatch-investigation",
     title: "Mismatch investigation",
     tone: "amber",
@@ -674,8 +749,16 @@ const repairWorkflowScenarios: WarrantyWorkflow[] = [
     expectedSerial: "ADAS-99015-R",
     scannedSerial: "ADAS-44200-X",
     replacementSerial: "ADAS-99177-OEM",
+    serviceRoute: "Mismatch review",
+    scanDecision: "Scanned part is not the original sealed to this VIN.",
+    finalFitmentLabel: "Replacement on",
+    finalFitmentSerial: "ADAS-99177-OEM",
+    vehicleStateAfterWork: "Unexpected ADAS-44200-X booked off; OEM replacement ADAS-99177-OEM booked on for safe return.",
+    partAuthenticity: "OEM serial, not logged to this VIN",
+    loggedToVinBaseline: false,
+    networkFitmentEvidence: "Prior fitment trace points outside the approved warranty network.",
     partNumber: "SENSOR-ADAS-99015",
-    scanOutcome: "ORIGINAL_MISMATCH",
+    scanOutcome: "NOT_LOGGED_TO_VEHICLE",
     oemPartRecognised: true,
     shipmentTrace: {
       status: "OEM serial recognised, but not original to this VIN",
@@ -714,6 +797,71 @@ const repairWorkflowScenarios: WarrantyWorkflow[] = [
       "Shipment trace shows outside-network destination, creating potential warranty invalidation.",
     ],
   },
+  {
+    id: "mismatched-part-returned",
+    title: "Unlogged part returned",
+    tone: "red",
+    assemblyNodeId: "part-adas-sensor",
+    currentStatus: "Returned with warranty flag",
+    summary:
+      "Removed part is not logged to this VIN and cannot be confirmed as genuine, but the technician returns it to the vehicle with evidence.",
+    expectedSerial: "ADAS-99015-R",
+    scannedSerial: "ADAS-AFT-8831",
+    replacementSerial: "ADAS-AFT-8831",
+    serviceRoute: "Return scanned part",
+    scanDecision: "Part is not the sealed original and OEM authenticity cannot be confirmed.",
+    finalFitmentLabel: "Returned to vehicle",
+    finalFitmentSerial: "ADAS-AFT-8831",
+    vehicleStateAfterWork:
+      "Unlogged ADAS-AFT-8831 remains fitted to the vehicle and is recorded as outside the network supply chain.",
+    partAuthenticity: "Not genuine / unknown",
+    loggedToVinBaseline: false,
+    networkFitmentEvidence: "No OEM shipment record and no approved-network fitment evidence.",
+    partNumber: "UNVERIFIED-ADAS-SENSOR",
+    scanOutcome: "NON_GENUINE",
+    oemPartRecognised: false,
+    shipmentTrace: {
+      status: "No OEM serial match",
+      shippedTo: "Not found in OEM shipment ledger",
+      repairerTier: "Outside network",
+      networkStatus: "Not fitted by network supplier",
+    },
+    warrantyImpact: "Warranty risk",
+    recommendedAction:
+      "Allow the technician to return the scanned part if required, but retain a non-genuine or unlogged fitment record against the VIN for warranty review.",
+    steps: [
+      {
+        label: "Open VIN file",
+        detail: "Vehicle file shows ADAS-99015-R as the sealed original component.",
+        tone: "cyan",
+      },
+      {
+        label: "Remove and scan",
+        detail: "Technician scans ADAS-AFT-8831, which is not the expected original serial.",
+        tone: "amber",
+      },
+      {
+        label: "Classify identity",
+        detail: "No OEM serial record is found, so the part is captured as non-genuine or unknown.",
+        tone: "red",
+      },
+      {
+        label: "Return scanned part",
+        detail: "Technician re-fits the scanned item, while VINtegrity logs that it was not fitted by a network supplier.",
+        tone: "amber",
+      },
+      {
+        label: "Warranty route",
+        detail: "Vehicle remains serviceable, but the affected node is marked for warranty impact review.",
+        tone: "red",
+      },
+    ],
+    evidenceLog: [
+      "Scanned part does not match the sealed initial-sale snapshot.",
+      "No OEM serial or approved shipment trace found for the scanned item.",
+      "Technician returned the scanned part to the vehicle and the fitment is logged as outside the network supply chain.",
+    ],
+  },
 ];
 
 const recallExposure = {
@@ -733,15 +881,66 @@ const careHistory = [
   "Future buyers can see system-level and component-level care history.",
 ];
 
-function flattenTree(node: AggregationNode, depth = 0, path: string[] = []): TreeRow[] {
+function findNodePath(node: AggregationNode, targetId: string, path: string[] = []): string[] | null {
+  const nextPath = [...path, node.id];
+  if (node.id === targetId) {
+    return nextPath;
+  }
+
+  for (const child of node.children || []) {
+    const childPath = findNodePath(child, targetId, nextPath);
+    if (childPath) {
+      return childPath;
+    }
+  }
+
+  return null;
+}
+
+function getExpandedIdsForNode(node: AggregationNode, targetId: string) {
+  const nodePath = findNodePath(node, targetId);
+  const expandedIds = new Set<string>([node.id]);
+  nodePath?.slice(0, -1).forEach((id) => expandedIds.add(id));
+  return expandedIds;
+}
+
+function collectBranchNodeIds(node: AggregationNode) {
+  const branchIds = new Set<string>();
+
+  function walk(current: AggregationNode) {
+    if (!current.children?.length) {
+      return;
+    }
+
+    branchIds.add(current.id);
+    current.children.forEach(walk);
+  }
+
+  walk(node);
+  return branchIds;
+}
+
+function flattenTree(
+  node: AggregationNode,
+  depth = 0,
+  path: string[] = [],
+  expandedNodeIds: Set<string> = new Set<string>(),
+  forceExpand = false,
+): TreeRow[] {
   const nextPath = [...path, node.label];
-  const childRows = (node.children || []).flatMap((child) => flattenTree(child, depth + 1, nextPath));
+  const childCount = node.children?.length || 0;
+  const isExpanded = childCount > 0 && (forceExpand || expandedNodeIds.has(node.id));
+  const childRows = isExpanded
+    ? (node.children || []).flatMap((child) => flattenTree(child, depth + 1, nextPath, expandedNodeIds, forceExpand))
+    : [];
+
   return [
     {
       ...node,
       depth,
       path: nextPath.join(" / "),
-      childCount: node.children?.length || 0,
+      childCount,
+      isExpanded,
     },
     ...childRows,
   ];
@@ -802,6 +1001,10 @@ function displayValue(value: string | number | undefined) {
   return value === undefined || value === "" ? "Not recorded" : value;
 }
 
+function warrantyLabel(value: string) {
+  return value.toLowerCase() === "none" ? "Warranty OK" : value;
+}
+
 function Wordmark() {
   return (
     <div className="brand-lockup" aria-label="VINtegrity">
@@ -834,17 +1037,41 @@ export default function App() {
   const [treeError, setTreeError] = useState<string | null>(null);
   const [workflowError, setWorkflowError] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState("asm-engine");
+  const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(() =>
+    getExpandedIdsForNode(demoAggregationRoot, "asm-engine"),
+  );
   const [directoryQuery, setDirectoryQuery] = useState("");
   const [activeWorkflowId, setActiveWorkflowId] = useState(repairWorkflowScenarios[0].id);
 
   const selectedVehicle = vehicleRecords[0];
-  const allRows = useMemo(() => flattenTree(aggregationRoot), [aggregationRoot]);
+  const allRows = useMemo(() => flattenTree(aggregationRoot, 0, [], new Set<string>(), true), [aggregationRoot]);
   const filteredRoot = useMemo(() => filterTree(aggregationRoot, directoryQuery), [aggregationRoot, directoryQuery]);
-  const visibleRows = useMemo(() => (filteredRoot ? flattenTree(filteredRoot) : []), [filteredRoot]);
+  const isTreeSearch = directoryQuery.trim().length > 0;
+  const visibleRows = useMemo(
+    () => (filteredRoot ? flattenTree(filteredRoot, 0, [], expandedNodeIds, isTreeSearch) : []),
+    [expandedNodeIds, filteredRoot, isTreeSearch],
+  );
   const selectedNode = allRows.find((row) => row.id === selectedNodeId) || allRows[0];
   const leafCount = useMemo(() => countLeafNodes(aggregationRoot), [aggregationRoot]);
   const activeWorkflow =
     workflowScenarios.find((workflow) => workflow.id === activeWorkflowId) || workflowScenarios[0];
+
+  function toggleNodeExpanded(nodeId: string) {
+    setExpandedNodeIds((current) => {
+      const next = new Set(current);
+      if (next.has(nodeId)) {
+        next.delete(nodeId);
+      } else {
+        next.add(nodeId);
+      }
+      return next;
+    });
+  }
+
+  function revealNode(nodeId: string) {
+    setSelectedNodeId(nodeId);
+    setExpandedNodeIds((current) => new Set([...current, ...getExpandedIdsForNode(aggregationRoot, nodeId)]));
+  }
 
   useEffect(() => {
     fetch(`${apiBase}/meta`)
@@ -864,7 +1091,10 @@ export default function App() {
         }
         return response.json();
       })
-      .then((payload: { root: AggregationNode }) => setAggregationRoot(payload.root))
+      .then((payload: { root: AggregationNode }) => {
+        setAggregationRoot(payload.root);
+        setExpandedNodeIds(getExpandedIdsForNode(payload.root, selectedNodeId));
+      })
       .catch((err: Error) => setTreeError(err.message));
 
     fetch(`${apiBase}/warranty-workflows/demo`)
@@ -996,27 +1226,55 @@ export default function App() {
                     <strong>{visibleRows.length}</strong>
                     <span>of {allRows.length} nodes</span>
                   </div>
-                </div>
-
-                <div className="tree-list" aria-label={`${selectedVehicle.vin} assembly directory`}>
-                  {visibleRows.map((row) => (
+                  <div className="directory-actions" aria-label="Tree display controls">
                     <button
                       type="button"
+                      onClick={() => setExpandedNodeIds(new Set([aggregationRoot.id]))}
+                      disabled={isTreeSearch}
+                    >
+                      Collapse
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedNodeIds(collectBranchNodeIds(aggregationRoot))}
+                      disabled={isTreeSearch}
+                    >
+                      Expand all
+                    </button>
+                  </div>
+                </div>
+
+                <div className="tree-list" role="tree" aria-label={`${selectedVehicle.vin} assembly directory`}>
+                  {visibleRows.map((row) => (
+                    <div
                       key={row.id}
                       className={`tree-row ${row.id === selectedNode.id ? "selected" : ""}`}
+                      role="treeitem"
+                      aria-level={row.depth + 1}
+                      aria-expanded={row.childCount > 0 ? row.isExpanded : undefined}
                       style={{ paddingLeft: `${12 + row.depth * 18}px` }}
-                      onClick={() => setSelectedNodeId(row.id)}
                     >
-                      <span className={`tree-marker ${row.childCount > 0 ? "branch" : "leaf"}`} aria-hidden="true">
-                        {row.childCount > 0 ? ">" : "-"}
-                      </span>
-                      <div className="tree-node-copy">
-                        <strong>{row.label}</strong>
-                        <span>{row.nodeType} / {row.category}</span>
-                      </div>
-                      <span className="tree-serial">{displayValue(row.serial || row.partNumber)}</span>
-                      <StatusChip label={row.status} tone={row.tone} />
-                    </button>
+                      {row.childCount > 0 ? (
+                        <button
+                          type="button"
+                          className="tree-toggle"
+                          aria-label={`${row.isExpanded ? "Collapse" : "Expand"} ${row.label}`}
+                          onClick={() => toggleNodeExpanded(row.id)}
+                        >
+                        {row.isExpanded ? "-" : "+"}
+                      </button>
+                    ) : (
+                        <span className="tree-toggle-placeholder" aria-hidden="true">.</span>
+                      )}
+                      <button type="button" className="tree-select" onClick={() => revealNode(row.id)}>
+                        <div className="tree-node-copy">
+                          <strong>{row.label}</strong>
+                          <span>{row.nodeType} / {row.category}</span>
+                        </div>
+                        <span className="tree-serial">{displayValue(row.serial || row.partNumber)}</span>
+                        <StatusChip label={row.status} tone={row.tone} />
+                      </button>
+                    </div>
                   ))}
                   {visibleRows.length === 0 && <p className="empty-state">No matching assembly nodes.</p>}
                 </div>
@@ -1125,9 +1383,9 @@ export default function App() {
             <div className="panel-header">
               <div>
                 <p className="meta-label">Scan and verify</p>
-                <h2>Removed-part evidence</h2>
+                <h2>Removed-part scan and fitment decision</h2>
               </div>
-              <StatusChip label={activeWorkflow.scanOutcome.replace(/_/g, " ")} tone={activeWorkflow.tone} />
+              <StatusChip label={activeWorkflow.serviceRoute} tone={activeWorkflow.tone} />
             </div>
             <div className="scan-box" aria-hidden="true">
               <span />
@@ -1155,6 +1413,14 @@ export default function App() {
                 <dd>{activeWorkflow.oemPartRecognised ? "Yes" : "No"}</dd>
               </div>
               <div>
+                <dt>VIN baseline</dt>
+                <dd>{activeWorkflow.loggedToVinBaseline ? "Logged to this VIN" : "Not logged to this VIN"}</dd>
+              </div>
+              <div>
+                <dt>Authenticity</dt>
+                <dd>{activeWorkflow.partAuthenticity}</dd>
+              </div>
+              <div>
                 <dt>Shipment destination</dt>
                 <dd>{activeWorkflow.shipmentTrace.shippedTo}</dd>
               </div>
@@ -1162,7 +1428,21 @@ export default function App() {
                 <dt>Network status</dt>
                 <dd>{activeWorkflow.shipmentTrace.networkStatus}</dd>
               </div>
+              <div>
+                <dt>Fitment evidence</dt>
+                <dd>{activeWorkflow.networkFitmentEvidence}</dd>
+              </div>
             </dl>
+            <div className="scan-decision-grid">
+              <div>
+                <span>Scan decision</span>
+                <strong>{activeWorkflow.scanDecision}</strong>
+              </div>
+              <div>
+                <span>Final vehicle state</span>
+                <strong>{activeWorkflow.vehicleStateAfterWork}</strong>
+              </div>
+            </div>
             <p className="panel-copy">
               {activeWorkflow.summary}
             </p>
@@ -1183,17 +1463,20 @@ export default function App() {
                     type="button"
                     key={workflow.id}
                     className={`workflow-card ${workflow.id === activeWorkflow.id ? "selected" : ""}`}
+                    aria-pressed={workflow.id === activeWorkflow.id}
                     onClick={() => {
                       setActiveWorkflowId(workflow.id);
-                      setSelectedNodeId(workflow.assemblyNodeId);
+                      revealNode(workflow.assemblyNodeId);
                     }}
                   >
                     <span className={`event-dot ${workflow.tone}`} />
                     <div>
                       <strong>{workflow.title}</strong>
                       <span>{workflow.summary}</span>
+                      <div className="workflow-card-meta">
+                        <StatusChip label={workflow.currentStatus} tone={workflow.tone} />
+                      </div>
                     </div>
-                    <StatusChip label={workflow.currentStatus} tone={workflow.tone} />
                   </button>
                 ))}
               </div>
@@ -1205,7 +1488,26 @@ export default function App() {
                     <strong>{activeWorkflow.title}</strong>
                     <span>{activeWorkflow.recommendedAction}</span>
                   </div>
-                  <StatusChip label={activeWorkflow.warrantyImpact} tone={activeWorkflow.tone} />
+                  <StatusChip label={warrantyLabel(activeWorkflow.warrantyImpact)} tone={activeWorkflow.tone} />
+                </div>
+
+                <div className="workflow-evidence-grid" aria-label="Repair evidence summary">
+                  <div>
+                    <span>Expected off</span>
+                    <strong>{activeWorkflow.expectedSerial}</strong>
+                  </div>
+                  <div>
+                    <span>Removed scan</span>
+                    <strong>{activeWorkflow.scannedSerial}</strong>
+                  </div>
+                  <div>
+                    <span>Fitment route</span>
+                    <strong>{activeWorkflow.serviceRoute}</strong>
+                  </div>
+                  <div>
+                    <span>{activeWorkflow.finalFitmentLabel}</span>
+                    <strong>{activeWorkflow.finalFitmentSerial}</strong>
+                  </div>
                 </div>
 
                 <div className="lifecycle-list">

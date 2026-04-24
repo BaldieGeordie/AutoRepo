@@ -489,6 +489,8 @@ button {
 
 .aggregation-panel,
 .twin-panel,
+.verify-panel,
+.repair-panel,
 .activity-panel {
   grid-column: 1 / -1;
 }
@@ -643,7 +645,7 @@ button {
 
 .directory-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 14px;
   align-items: end;
   padding: 14px;
@@ -696,6 +698,33 @@ button {
   white-space: nowrap;
 }
 
+.directory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.directory-actions button {
+  min-height: 34px;
+  border: 1px solid rgba(42, 52, 70, 0.9);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: var(--chrome-silver);
+  background: rgba(7, 10, 15, 0.72);
+  cursor: pointer;
+}
+
+.directory-actions button:hover:not(:disabled) {
+  border-color: rgba(25, 211, 197, 0.52);
+  color: var(--neon-aqua);
+}
+
+.directory-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
 .tree-list {
   display: grid;
   max-height: 590px;
@@ -705,15 +734,14 @@ button {
 
 .tree-row {
   display: grid;
-  grid-template-columns: 20px minmax(180px, 1fr) minmax(140px, 0.62fr) auto;
+  grid-template-columns: 24px minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-height: 48px;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
   text-align: left;
-  cursor: pointer;
 }
 
 .tree-row:hover,
@@ -726,9 +754,10 @@ button {
   box-shadow: inset 3px 0 0 var(--verified-cyan);
 }
 
-.tree-marker {
-  width: 20px;
-  height: 20px;
+.tree-toggle,
+.tree-toggle-placeholder {
+  width: 24px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -740,10 +769,34 @@ button {
   font-weight: 900;
 }
 
-.tree-marker.branch {
+.tree-toggle {
   color: #031312;
   background: var(--verified-cyan);
   border-color: rgba(55, 245, 229, 0.7);
+  cursor: pointer;
+}
+
+.tree-toggle:hover {
+  box-shadow: 0 0 0 3px rgba(25, 211, 197, 0.12);
+}
+
+.tree-toggle-placeholder {
+  color: var(--slate-grey);
+  background: rgba(7, 10, 15, 0.48);
+}
+
+.tree-select {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(140px, 0.62fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 7px;
+  padding: 10px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
 }
 
 .tree-node-copy {
@@ -1049,6 +1102,43 @@ button {
   overflow-wrap: anywhere;
 }
 
+.scan-decision-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.scan-decision-grid div {
+  min-height: 86px;
+  border: 1px solid rgba(42, 52, 70, 0.78);
+  border-radius: 8px;
+  padding: 12px;
+  background:
+    linear-gradient(180deg, rgba(24, 33, 50, 0.58), rgba(7, 10, 15, 0.46)),
+    rgba(7, 10, 15, 0.38);
+}
+
+.scan-decision-grid span,
+.scan-decision-grid strong {
+  display: block;
+}
+
+.scan-decision-grid span {
+  color: var(--slate-grey);
+  font-size: 0.7rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.scan-decision-grid strong {
+  margin-top: 10px;
+  color: var(--ice-white);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 .panel-copy {
   margin: 12px 0 0;
 }
@@ -1130,7 +1220,7 @@ button {
 
 .workflow-layout {
   display: grid;
-  grid-template-columns: minmax(300px, 0.78fr) minmax(0, 1.22fr);
+  grid-template-columns: 1fr;
   gap: 14px;
   align-items: start;
 }
@@ -1141,12 +1231,16 @@ button {
   gap: 10px;
 }
 
+.workflow-switcher {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
 .workflow-card {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 12px;
-  align-items: center;
-  min-height: 94px;
+  align-items: start;
+  min-height: 116px;
   border: 1px solid rgba(42, 52, 70, 0.72);
   border-radius: 8px;
   padding: 12px;
@@ -1163,6 +1257,13 @@ button {
 
 .workflow-card.selected {
   box-shadow: inset 3px 0 0 var(--verified-cyan);
+}
+
+.workflow-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .workflow-card strong,
@@ -1195,6 +1296,40 @@ button {
   background:
     linear-gradient(180deg, rgba(24, 33, 50, 0.62), rgba(7, 10, 15, 0.58)),
     rgba(7, 10, 15, 0.42);
+}
+
+.workflow-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.workflow-evidence-grid div {
+  min-height: 78px;
+  border: 1px solid rgba(42, 52, 70, 0.78);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(7, 10, 15, 0.36);
+}
+
+.workflow-evidence-grid span,
+.workflow-evidence-grid strong {
+  display: block;
+}
+
+.workflow-evidence-grid span {
+  color: var(--slate-grey);
+  font-size: 0.7rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.workflow-evidence-grid strong {
+  margin-top: 10px;
+  color: var(--ice-white);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
 }
 
 .recall-grid {
@@ -1320,6 +1455,8 @@ button {
   }
 
   .scan-comparison,
+  .scan-decision-grid,
+  .workflow-evidence-grid,
   .directory-toolbar,
   .tree-row,
   .workflow-card {

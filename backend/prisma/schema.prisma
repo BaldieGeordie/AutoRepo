@@ -96,6 +96,8 @@ enum RepairEventStatus {
 enum RepairEventItemAction {
   BOOK_OFF
   BOOK_ON
+  REFIT_ORIGINAL
+  RETURN_SCANNED_PART
   VERIFY_PRESENT
 }
 
@@ -103,7 +105,23 @@ enum PartScanOutcome {
   ORIGINAL_MATCH
   ORIGINAL_MISMATCH
   OEM_PART_RECOGNISED
+  NOT_LOGGED_TO_VEHICLE
+  NON_GENUINE
   UNKNOWN_SERIAL
+}
+
+enum PartAuthenticity {
+  ORIGINAL_TO_VIN
+  OEM_NOT_LOGGED_TO_VIN
+  NON_GENUINE
+  UNKNOWN
+}
+
+enum FitmentDecision {
+  REPLACE_COMPONENT
+  REFIT_ORIGINAL
+  RETURN_SCANNED_PART
+  WARRANTY_REVIEW
 }
 
 enum CampaignStatus {
@@ -334,29 +352,37 @@ model RepairEventItem {
 }
 
 model RepairScanEvidence {
-  id                    String               @id @default(uuid())
-  repairEventId         String
-  assemblyNodeId        String?
-  expectedSerial        String
-  scannedSerial         String
-  expectedPartNumber    String?
-  scannedPartNumber     String?
-  outcome               PartScanOutcome
-  oemPartRecognised     Boolean              @default(false)
-  shippedToOrganisation String?
-  shippedToRepairerTier RepairerTier?
-  networkStatus         NetworkFitmentStatus
-  warrantyImpact        WarrantyImpact       @default(UNKNOWN)
-  scannedAt             DateTime             @default(now())
-  notes                 String?
-  repairEvent           RepairEvent          @relation(fields: [repairEventId], references: [id], onDelete: Cascade)
-  assemblyNode          AssemblyNode?        @relation(fields: [assemblyNodeId], references: [id], onDelete: SetNull)
+  id                     String               @id @default(uuid())
+  repairEventId          String
+  assemblyNodeId         String?
+  expectedSerial         String
+  scannedSerial          String
+  expectedPartNumber     String?
+  scannedPartNumber      String?
+  outcome                PartScanOutcome
+  authenticity           PartAuthenticity     @default(UNKNOWN)
+  loggedToVinBaseline    Boolean              @default(false)
+  fitmentDecision        FitmentDecision      @default(REPLACE_COMPONENT)
+  finalFitmentSerial     String?
+  oemPartRecognised      Boolean              @default(false)
+  shippedToOrganisation  String?
+  shippedToRepairerTier  RepairerTier?
+  networkFitmentEvidence String?
+  networkStatus          NetworkFitmentStatus
+  warrantyImpact         WarrantyImpact       @default(UNKNOWN)
+  scannedAt              DateTime             @default(now())
+  notes                  String?
+  repairEvent            RepairEvent          @relation(fields: [repairEventId], references: [id], onDelete: Cascade)
+  assemblyNode           AssemblyNode?        @relation(fields: [assemblyNodeId], references: [id], onDelete: SetNull)
 
   @@index([repairEventId])
   @@index([assemblyNodeId])
   @@index([expectedSerial])
   @@index([scannedSerial])
   @@index([outcome])
+  @@index([authenticity])
+  @@index([loggedToVinBaseline])
+  @@index([fitmentDecision])
   @@index([networkStatus, warrantyImpact])
 }
 

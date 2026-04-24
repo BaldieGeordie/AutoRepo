@@ -14,6 +14,9 @@ The main asset is the vehicle aggregation itself. Value comes from trusted knowl
 - whether the repairer was OEM, approved, tier 2/certified, or outside the network
 - which components were booked off and back on during warranty or repair work
 - whether a removed component scan matches the original part sealed into the VIN baseline
+- whether the authenticated original part was re-fitted or replaced after inspection
+- whether the scanned part is non-genuine or not logged to the current VIN
+- whether a mismatched part was returned to the vehicle despite being outside the approved network
 - whether a mismatched OEM component was shipped to an approved or outside-network repairer
 - which vehicles are actually exposed to a recall because they carry the affected serialized component
 - what is physically present when inspected later
@@ -91,12 +94,14 @@ This is how the platform proves that manufacturers or approved repairers really 
 
 ### Repair Scan Evidence
 
-The technician's scan result for a removed part. It captures the expected original serial, the scanned serial, whether the scanned item is recognised as OEM, where that part was shipped, the repairer network tier, and the warranty impact.
+The technician's scan result for a removed part. It captures the expected original serial, the scanned serial, whether the scanned item is recognised as OEM, whether it is logged to the current VIN, whether it appears non-genuine, whether the technician re-fitted the original, returned the scanned mismatch, or fitted a replacement, where that part was shipped, the repairer network tier, and the warranty impact.
 
 This supports two core warranty flows:
 
 - original part confirmed: scan matches the sealed VIN baseline, then the technician books the faulty part off and the replacement on
+- original part re-fitted: scan matches the sealed VIN baseline, then the technician books the same serial back onto the same assembly node
 - mismatch investigation: scan does not match the sealed VIN baseline, then the system checks OEM serial recognition and shipment trace before routing warranty impact
+- mismatched part returned: scan does not match or cannot be confirmed genuine, the technician may still return it to the vehicle, and the VIN file records that the part was not fitted through the network supplier route
 
 ### Safety Campaign
 
@@ -128,10 +133,13 @@ The first meaningful end-to-end demo should prove:
 7. the initial-sale snapshot is sealed and queued for evidence anchoring
 8. a warranty or repair event books parts off and back on the vehicle
 9. removed-part scan evidence is compared against the original VIN baseline
-10. mismatched OEM parts are traced to their shipment destination and repairer network tier
-11. a recall campaign is resolved to vehicles carrying affected components
-12. the assembly is inspected later
-13. the platform flags warranty-relevant variance:
+10. a technician can either replace the part or re-fit the authenticated original
+11. non-genuine or not-logged-to-VIN parts are captured
+12. a technician can return a mismatched scanned part while preserving non-network fitment evidence
+13. mismatched OEM parts are traced to their shipment destination and repairer network tier
+14. a recall campaign is resolved to vehicles carrying affected components
+15. the assembly is inspected later
+16. the platform flags warranty-relevant variance:
    - missing component
    - unexpected added component
    - substituted component
