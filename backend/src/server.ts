@@ -543,6 +543,122 @@ const demoRepairEvent = {
   ],
 };
 
+const demoWarrantyWorkflows = {
+  vin: "WVWZZZCD7NW184201",
+  assemblyUid: starterAssembly.assemblyUid,
+  serviceOrderRef: "SO-WTY-184201-044",
+  warrantyClaimRef: "WTY-ADAS-184201",
+  technician: {
+    displayName: "M. Kaur",
+    repairer: "Northgate OEM Service",
+    repairerTier: "OEM repairer",
+  },
+  workflows: [
+    {
+      id: "original-part-confirmed",
+      title: "Original part confirmed",
+      tone: "green",
+      assemblyNodeId: "part-adas-sensor",
+      currentStatus: "Ready to book replacement",
+      summary:
+        "Technician scans the removed ADAS sensor and the serial matches the original sealed vehicle baseline.",
+      expectedSerial: "ADAS-99015-R",
+      scannedSerial: "ADAS-99015-R",
+      replacementSerial: "ADAS-99177-OEM",
+      partNumber: "SENSOR-ADAS-99015",
+      scanOutcome: "ORIGINAL_MATCH",
+      oemPartRecognised: true,
+      shipmentTrace: {
+        status: "Original factory fit",
+        shippedTo: "OEM plant 04",
+        repairerTier: "OEM manufacturing",
+        networkStatus: "Inside OEM network",
+      },
+      warrantyImpact: "None",
+      recommendedAction:
+        "Book the faulty original part off the vehicle, book the authenticated replacement on, and retain repair evidence against the VIN file.",
+      steps: [
+        {
+          label: "Open VIN file",
+          detail: "Vehicle file WVWZZZCD7NW184201 is loaded with the sealed initial-sale assembly tree.",
+          tone: "cyan",
+        },
+        {
+          label: "Scan removed part",
+          detail: "Removed part scan matches expected original serial ADAS-99015-R.",
+          tone: "green",
+        },
+        {
+          label: "Book off",
+          detail: "Faulty original component is removed from Accessories and electronics / Driver assistance sensor.",
+          tone: "cyan",
+        },
+        {
+          label: "Book on",
+          detail: "Replacement serial ADAS-99177-OEM is fitted and authenticated by an OEM repairer technician.",
+          tone: "green",
+        },
+      ],
+      evidenceLog: [
+        "Original component confirmed against initial-sale snapshot.",
+        "Faulty component booked off the vehicle assembly.",
+        "Replacement component booked on with technician, repairer, and service order evidence.",
+      ],
+    },
+    {
+      id: "mismatch-investigation",
+      title: "Mismatch investigation",
+      tone: "amber",
+      assemblyNodeId: "part-adas-sensor",
+      currentStatus: "Warranty review required",
+      summary:
+        "Technician scans the removed ADAS sensor and the serial does not match the sealed original fitted part.",
+      expectedSerial: "ADAS-99015-R",
+      scannedSerial: "ADAS-44200-X",
+      replacementSerial: "ADAS-99177-OEM",
+      partNumber: "SENSOR-ADAS-99015",
+      scanOutcome: "ORIGINAL_MISMATCH",
+      oemPartRecognised: true,
+      shipmentTrace: {
+        status: "OEM serial recognised, but not original to this VIN",
+        shippedTo: "West Quay Autocare",
+        repairerTier: "Outside network",
+        networkStatus: "Outside approved warranty network",
+      },
+      warrantyImpact: "Warranty risk",
+      recommendedAction:
+        "Flag mismatch, show OEM part/shipment trace, book the unexpected component off, fit an authenticated replacement, and route the claim to warranty review.",
+      steps: [
+        {
+          label: "Open VIN file",
+          detail: "Vehicle file shows ADAS-99015-R as the sealed original component.",
+          tone: "cyan",
+        },
+        {
+          label: "Scan removed part",
+          detail: "Removed component ADAS-44200-X does not match the original vehicle baseline.",
+          tone: "amber",
+        },
+        {
+          label: "Trace part",
+          detail: "Serial is recognised as OEM, but shipment trace points to an outside-network workshop.",
+          tone: "red",
+        },
+        {
+          label: "Warranty route",
+          detail: "Technician can still book the work, but the warranty claim is marked for OEM review.",
+          tone: "amber",
+        },
+      ],
+      evidenceLog: [
+        "Mismatch recorded against sealed initial-sale snapshot.",
+        "Scanned part recognised as an OEM serial.",
+        "Shipment trace shows outside-network destination, creating potential warranty invalidation.",
+      ],
+    },
+  ],
+};
+
 const demoRecallCampaign = {
   campaignCode: "SC-ADAS-27F",
   title: "ADAS sensor water ingress safety campaign",
@@ -600,6 +716,9 @@ async function main() {
       "Nested major systems, assemblies, sub-assemblies, components, and parts",
       "Serialized component authentication by named users",
       "Book-off and book-on repair event lifecycle",
+      "Technician scan evidence for removed parts",
+      "Original-part mismatch detection against sealed VIN baseline",
+      "OEM part recognition and shipment trace for warranty review",
       "OEM and approved repairer network evidence",
       "Tiered repairer model for warranty review",
       "Targeted recall exposure by component-to-vehicle attachment",
@@ -615,6 +734,8 @@ async function main() {
       "Seal the initial sale composition for each vehicle",
       "Authenticate component fitments by user and repairer tier",
       "Book components off and back on during repair work",
+      "Scan removed parts and compare against the original VIN baseline",
+      "Trace mismatched OEM parts to shipment destination and repairer network tier",
       "Resolve safety campaigns to vehicles carrying affected components",
       "Record repairs from OEM, approved, tier 2, and outside-network repairers",
       "Detect warranty-sensitive parts fitted outside the repairer network",
@@ -631,6 +752,8 @@ async function main() {
   app.get("/api/v1/assemblies/demo/tree", async () => demoAssemblyTree);
 
   app.get("/api/v1/repair-events/demo", async () => demoRepairEvent);
+
+  app.get("/api/v1/warranty-workflows/demo", async () => demoWarrantyWorkflows);
 
   app.get("/api/v1/recalls/demo", async () => demoRecallCampaign);
 

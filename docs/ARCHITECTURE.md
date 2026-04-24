@@ -13,6 +13,8 @@ The main asset is the vehicle aggregation itself. Value comes from trusted knowl
 - who authenticated each fitted item
 - whether the repairer was OEM, approved, tier 2/certified, or outside the network
 - which components were booked off and back on during warranty or repair work
+- whether a removed component scan matches the original part sealed into the VIN baseline
+- whether a mismatched OEM component was shipped to an approved or outside-network repairer
 - which vehicles are actually exposed to a recall because they carry the affected serialized component
 - what is physically present when inspected later
 - whether an outside-network fitment may affect warranty responsibility
@@ -87,6 +89,15 @@ The serial-level movement of a component during the repair event. VINtegrity sho
 
 This is how the platform proves that manufacturers or approved repairers really changed the part they said they changed.
 
+### Repair Scan Evidence
+
+The technician's scan result for a removed part. It captures the expected original serial, the scanned serial, whether the scanned item is recognised as OEM, where that part was shipped, the repairer network tier, and the warranty impact.
+
+This supports two core warranty flows:
+
+- original part confirmed: scan matches the sealed VIN baseline, then the technician books the faulty part off and the replacement on
+- mismatch investigation: scan does not match the sealed VIN baseline, then the system checks OEM serial recognition and shipment trace before routing warranty impact
+
 ### Safety Campaign
 
 A recall or service campaign targeted at affected component part numbers, serial ranges, or serialized components.
@@ -116,9 +127,11 @@ The first meaningful end-to-end demo should prove:
 6. fitments are authenticated by user and repairer tier
 7. the initial-sale snapshot is sealed and queued for evidence anchoring
 8. a warranty or repair event books parts off and back on the vehicle
-9. a recall campaign is resolved to vehicles carrying affected components
-10. the assembly is inspected later
-11. the platform flags warranty-relevant variance:
+9. removed-part scan evidence is compared against the original VIN baseline
+10. mismatched OEM parts are traced to their shipment destination and repairer network tier
+11. a recall campaign is resolved to vehicles carrying affected components
+12. the assembly is inspected later
+13. the platform flags warranty-relevant variance:
    - missing component
    - unexpected added component
    - substituted component

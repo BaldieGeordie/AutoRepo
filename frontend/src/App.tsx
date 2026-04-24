@@ -65,22 +65,48 @@ type TreeRow = AggregationNode & {
   childCount: number;
 };
 
+type WorkflowStep = {
+  label: string;
+  detail: string;
+  tone: Tone;
+};
+
+type WarrantyWorkflow = {
+  id: string;
+  title: string;
+  tone: Tone;
+  assemblyNodeId: string;
+  currentStatus: string;
+  summary: string;
+  expectedSerial: string;
+  scannedSerial: string;
+  replacementSerial: string;
+  partNumber: string;
+  scanOutcome: string;
+  oemPartRecognised: boolean;
+  shipmentTrace: {
+    status: string;
+    shippedTo: string;
+    repairerTier: string;
+    networkStatus: string;
+  };
+  warrantyImpact: string;
+  recommendedAction: string;
+  steps: WorkflowStep[];
+  evidenceLog: string[];
+};
+
 const apiBase = import.meta.env.VITE_API_BASE || "/api/v1";
 
-const navigation = [
-  "Dashboard",
-  "Vehicles",
-  "Assembly Directory",
-  "Components",
-  "Repairer Network",
-  "Authenticated Repairs",
-  "Warranty Reviews",
-  "Targeted Recalls",
-  "Care History",
-  "Verify Fitment",
-  "Audit Trail",
-  "System Settings",
-  "Users",
+const navigation: Array<{ label: string; target: string }> = [
+  { label: "Current VIN", target: "vin-file" },
+  { label: "Assembly Directory", target: "assembly-directory" },
+  { label: "Repair Workflow", target: "repair-workflow" },
+  { label: "Scan & Verify", target: "scan-verify" },
+  { label: "Warranty Review", target: "warranty-review" },
+  { label: "Targeted Recalls", target: "targeted-recalls" },
+  { label: "Care History", target: "care-history" },
+  { label: "Audit Trail", target: "audit-trail" },
 ];
 
 const metrics: Array<{ label: string; value: string; delta: string; tone: Tone }> = [
@@ -587,24 +613,106 @@ const eventFeed = [
 
 const custodyStages = ["OEM Build", "Approved Repair", "Book Off", "Book On", "Warranty Review"];
 
-const repairLifecycle = [
+const repairWorkflowScenarios: WarrantyWorkflow[] = [
   {
-    action: "Verify present",
-    detail: "ADAS-99015-R confirmed under Accessories and electronics before work starts.",
-    actor: "M. Kaur - OEM repairer",
-    tone: "green" as Tone,
+    id: "original-part-confirmed",
+    title: "Original part confirmed",
+    tone: "green",
+    assemblyNodeId: "part-adas-sensor",
+    currentStatus: "Ready to book replacement",
+    summary: "Removed part scan matches the serial sealed into the initial-sale VIN baseline.",
+    expectedSerial: "ADAS-99015-R",
+    scannedSerial: "ADAS-99015-R",
+    replacementSerial: "ADAS-99177-OEM",
+    partNumber: "SENSOR-ADAS-99015",
+    scanOutcome: "ORIGINAL_MATCH",
+    oemPartRecognised: true,
+    shipmentTrace: {
+      status: "Original factory fit",
+      shippedTo: "OEM plant 04",
+      repairerTier: "OEM manufacturing",
+      networkStatus: "Inside OEM network",
+    },
+    warrantyImpact: "None",
+    recommendedAction:
+      "Book the faulty original part off the vehicle, book the authenticated replacement on, and retain repair evidence against the VIN file.",
+    steps: [
+      {
+        label: "Open VIN file",
+        detail: "Vehicle file WVWZZZCD7NW184201 is loaded with the sealed initial-sale assembly tree.",
+        tone: "cyan",
+      },
+      {
+        label: "Scan removed part",
+        detail: "Removed part scan matches expected original serial ADAS-99015-R.",
+        tone: "green",
+      },
+      {
+        label: "Book off",
+        detail: "Faulty original component is removed from Accessories and electronics / Driver assistance sensor.",
+        tone: "cyan",
+      },
+      {
+        label: "Book on",
+        detail: "Replacement serial ADAS-99177-OEM is fitted and authenticated by an OEM repairer technician.",
+        tone: "green",
+      },
+    ],
+    evidenceLog: [
+      "Original component confirmed against initial-sale snapshot.",
+      "Faulty component booked off the vehicle assembly.",
+      "Replacement component booked on with technician, repairer, and service order evidence.",
+    ],
   },
   {
-    action: "Book off",
-    detail: "Faulting sensor removed from its assembly-node position.",
-    actor: "Service order SO-WTY-184201-044",
-    tone: "cyan" as Tone,
-  },
-  {
-    action: "Book on",
-    detail: "Replacement sensor linked back to the same tree position with fitment evidence.",
-    actor: "Warranty review required",
-    tone: "amber" as Tone,
+    id: "mismatch-investigation",
+    title: "Mismatch investigation",
+    tone: "amber",
+    assemblyNodeId: "part-adas-sensor",
+    currentStatus: "Warranty review required",
+    summary: "Removed part scan does not match the serial sealed into the initial-sale VIN baseline.",
+    expectedSerial: "ADAS-99015-R",
+    scannedSerial: "ADAS-44200-X",
+    replacementSerial: "ADAS-99177-OEM",
+    partNumber: "SENSOR-ADAS-99015",
+    scanOutcome: "ORIGINAL_MISMATCH",
+    oemPartRecognised: true,
+    shipmentTrace: {
+      status: "OEM serial recognised, but not original to this VIN",
+      shippedTo: "West Quay Autocare",
+      repairerTier: "Outside network",
+      networkStatus: "Outside approved warranty network",
+    },
+    warrantyImpact: "Warranty risk",
+    recommendedAction:
+      "Flag mismatch, show OEM part/shipment trace, book the unexpected component off, fit an authenticated replacement, and route the claim to warranty review.",
+    steps: [
+      {
+        label: "Open VIN file",
+        detail: "Vehicle file shows ADAS-99015-R as the sealed original component.",
+        tone: "cyan",
+      },
+      {
+        label: "Scan removed part",
+        detail: "Removed component ADAS-44200-X does not match the original vehicle baseline.",
+        tone: "amber",
+      },
+      {
+        label: "Trace part",
+        detail: "Serial is recognised as OEM, but shipment trace points to an outside-network workshop.",
+        tone: "red",
+      },
+      {
+        label: "Warranty route",
+        detail: "Technician can still book the work, but the warranty claim is marked for OEM review.",
+        tone: "amber",
+      },
+    ],
+    evidenceLog: [
+      "Mismatch recorded against sealed initial-sale snapshot.",
+      "Scanned part recognised as an OEM serial.",
+      "Shipment trace shows outside-network destination, creating potential warranty invalidation.",
+    ],
   },
 ];
 
@@ -721,18 +829,22 @@ function StatusChip({ label, tone }: { label: string; tone: Tone }) {
 export default function App() {
   const [meta, setMeta] = useState<MetaResponse | null>(null);
   const [aggregationRoot, setAggregationRoot] = useState<AggregationNode>(demoAggregationRoot);
+  const [workflowScenarios, setWorkflowScenarios] = useState<WarrantyWorkflow[]>(repairWorkflowScenarios);
   const [error, setError] = useState<string | null>(null);
   const [treeError, setTreeError] = useState<string | null>(null);
-  const [selectedVehicleVin, setSelectedVehicleVin] = useState(vehicleRecords[0].vin);
+  const [workflowError, setWorkflowError] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState("asm-engine");
   const [directoryQuery, setDirectoryQuery] = useState("");
+  const [activeWorkflowId, setActiveWorkflowId] = useState(repairWorkflowScenarios[0].id);
 
-  const selectedVehicle = vehicleRecords.find((record) => record.vin === selectedVehicleVin) || vehicleRecords[0];
+  const selectedVehicle = vehicleRecords[0];
   const allRows = useMemo(() => flattenTree(aggregationRoot), [aggregationRoot]);
   const filteredRoot = useMemo(() => filterTree(aggregationRoot, directoryQuery), [aggregationRoot, directoryQuery]);
   const visibleRows = useMemo(() => (filteredRoot ? flattenTree(filteredRoot) : []), [filteredRoot]);
   const selectedNode = allRows.find((row) => row.id === selectedNodeId) || allRows[0];
   const leafCount = useMemo(() => countLeafNodes(aggregationRoot), [aggregationRoot]);
+  const activeWorkflow =
+    workflowScenarios.find((workflow) => workflow.id === activeWorkflowId) || workflowScenarios[0];
 
   useEffect(() => {
     fetch(`${apiBase}/meta`)
@@ -754,6 +866,16 @@ export default function App() {
       })
       .then((payload: { root: AggregationNode }) => setAggregationRoot(payload.root))
       .catch((err: Error) => setTreeError(err.message));
+
+    fetch(`${apiBase}/warranty-workflows/demo`)
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((payload: { workflows: WarrantyWorkflow[] }) => setWorkflowScenarios(payload.workflows))
+      .catch((err: Error) => setWorkflowError(err.message));
   }, []);
 
   return (
@@ -762,8 +884,12 @@ export default function App() {
         <Wordmark />
         <nav className="nav-list" aria-label="Primary navigation">
           {navigation.map((item) => (
-            <a key={item} className={item === "Dashboard" ? "nav-item active" : "nav-item"} href="#">
-              {item}
+            <a
+              key={item.target}
+              className={item.target === "vin-file" ? "nav-item active" : "nav-item"}
+              href={`#${item.target}`}
+            >
+              {item.label}
             </a>
           ))}
         </nav>
@@ -776,23 +902,22 @@ export default function App() {
       </aside>
 
       <main className="dashboard">
-        <header className="topbar">
+        <header className="topbar" id="vin-file">
           <div>
-            <p className="meta-label">AuthLine Auto - OEM warranty intelligence</p>
-            <h1>Vehicle Assembly Directory</h1>
+            <p className="meta-label">AuthLine Auto - current VIN file</p>
+            <h1>Warranty Repair Workspace</h1>
             <p className="subtitle">
-              AuthLine Auto gives manufacturers a control surface for the complete car: major systems, assemblies,
-              sub-assemblies, components, smallest parts, repair evidence, recall exposure, and warranty-sensitive
-              fitment history.
+              Open the VIN, locate the faulty component in the assembly tree, scan the removed part, book it off the
+              car, then book the replacement on with technician, repairer, shipment trace, and warranty evidence.
             </p>
           </div>
           <div className="header-actions" aria-label="Verification summary">
             <div className="signal">
               <span className="signal-dot" />
-              Live hierarchy
+              VIN file active
             </div>
             <button type="button" className="primary-action">
-              Verify Node
+              Start Scan
             </button>
           </div>
         </header>
@@ -806,8 +931,31 @@ export default function App() {
             </strong>
           </div>
           <div className="vin-plate" aria-label="VIN sample">
-            VIN 9C4A-7F21-VERIFIED
+            {selectedVehicle.vin}
           </div>
+        </section>
+
+        <section className="vin-context-grid" aria-label="Current VIN file summary">
+          <article>
+            <p className="meta-label">Vehicle</p>
+            <strong>{selectedVehicle.model}</strong>
+            <span>{selectedVehicle.warranty}</span>
+          </article>
+          <article>
+            <p className="meta-label">Service order</p>
+            <strong>SO-WTY-184201-044</strong>
+            <span>ADAS calibration fault</span>
+          </article>
+          <article>
+            <p className="meta-label">Technician</p>
+            <strong>M. Kaur</strong>
+            <span>{selectedVehicle.repairer} / {selectedVehicle.repairerTier}</span>
+          </article>
+          <article>
+            <p className="meta-label">Workflow status</p>
+            <strong>{activeWorkflow.currentStatus}</strong>
+            <span>{activeWorkflow.title}</span>
+          </article>
         </section>
 
         <section className="metric-grid" aria-label="Platform metrics">
@@ -824,7 +972,7 @@ export default function App() {
         </section>
 
         <section className="workspace-grid">
-          <article className="panel aggregation-panel">
+          <article className="panel aggregation-panel" id="assembly-directory">
             <div className="panel-header">
               <div>
                 <p className="meta-label">Vehicle Aggregation</p>
@@ -973,42 +1121,13 @@ export default function App() {
             </div>
           </article>
 
-          <article className="panel vehicle-panel">
+          <article className="panel verify-panel" id="scan-verify">
             <div className="panel-header">
               <div>
-                <p className="meta-label">Vehicles</p>
-                <h2>Warranty-period vehicle assemblies</h2>
+                <p className="meta-label">Scan and verify</p>
+                <h2>Removed-part evidence</h2>
               </div>
-              <StatusChip label="Verified" tone="green" />
-            </div>
-            <div className="record-table">
-              {vehicleRecords.map((record) => (
-                <button
-                  type="button"
-                  className={`record-row ${record.vin === selectedVehicle.vin ? "selected" : ""}`}
-                  key={record.vin}
-                  onClick={() => setSelectedVehicleVin(record.vin)}
-                >
-                  <div>
-                    <strong>{record.vin}</strong>
-                    <span>{record.model}</span>
-                  </div>
-                  <div>
-                    <span className="muted">{record.repairer}</span>
-                    <span className="muted">{record.repairerTier} / {record.warranty} / {record.lastCheck}</span>
-                  </div>
-                  <StatusChip label={record.status} tone={record.tone} />
-                </button>
-              ))}
-            </div>
-          </article>
-
-          <article className="panel verify-panel">
-            <div className="panel-header">
-              <div>
-                <p className="meta-label">Verify</p>
-                <h2>Warranty impact triage</h2>
-              </div>
+              <StatusChip label={activeWorkflow.scanOutcome.replace(/_/g, " ")} tone={activeWorkflow.tone} />
             </div>
             <div className="scan-box" aria-hidden="true">
               <span />
@@ -1016,39 +1135,106 @@ export default function App() {
               <span />
               <span />
             </div>
-            <div className="verification-score">
-              <span>Tree integrity score</span>
-              <strong>98.7%</strong>
+            <div className="scan-comparison">
+              <div>
+                <span>Expected original</span>
+                <strong>{activeWorkflow.expectedSerial}</strong>
+              </div>
+              <div>
+                <span>Scanned removed part</span>
+                <strong>{activeWorkflow.scannedSerial}</strong>
+              </div>
             </div>
+            <dl className="scan-meta">
+              <div>
+                <dt>Part number</dt>
+                <dd>{activeWorkflow.partNumber}</dd>
+              </div>
+              <div>
+                <dt>OEM recognised</dt>
+                <dd>{activeWorkflow.oemPartRecognised ? "Yes" : "No"}</dd>
+              </div>
+              <div>
+                <dt>Shipment destination</dt>
+                <dd>{activeWorkflow.shipmentTrace.shippedTo}</dd>
+              </div>
+              <div>
+                <dt>Network status</dt>
+                <dd>{activeWorkflow.shipmentTrace.networkStatus}</dd>
+              </div>
+            </dl>
             <p className="panel-copy">
-              VINtegrity evaluates fitment evidence at the vehicle, system, assembly, sub-assembly, component, and part
-              level.
+              {activeWorkflow.summary}
             </p>
           </article>
 
-          <article className="panel repair-panel">
+          <article className="panel repair-panel" id="repair-workflow">
             <div className="panel-header">
               <div>
-                <p className="meta-label">Repair lifecycle</p>
+                <p className="meta-label">Technician workflow</p>
                 <h2>Book parts off and back on</h2>
               </div>
-              <StatusChip label="Repair Booked" tone="cyan" />
+              <StatusChip label={activeWorkflow.currentStatus} tone={activeWorkflow.tone} />
             </div>
-            <div className="lifecycle-list">
-              {repairLifecycle.map((step, index) => (
-                <div className="lifecycle-step" key={step.action}>
-                  <span className={`event-dot ${step.tone}`} />
+            <div className="workflow-layout">
+              <div className="workflow-switcher" aria-label="Warranty workflow scenarios">
+                {workflowScenarios.map((workflow) => (
+                  <button
+                    type="button"
+                    key={workflow.id}
+                    className={`workflow-card ${workflow.id === activeWorkflow.id ? "selected" : ""}`}
+                    onClick={() => {
+                      setActiveWorkflowId(workflow.id);
+                      setSelectedNodeId(workflow.assemblyNodeId);
+                    }}
+                  >
+                    <span className={`event-dot ${workflow.tone}`} />
+                    <div>
+                      <strong>{workflow.title}</strong>
+                      <span>{workflow.summary}</span>
+                    </div>
+                    <StatusChip label={workflow.currentStatus} tone={workflow.tone} />
+                  </button>
+                ))}
+              </div>
+
+              <div className="workflow-detail">
+                <div className="workflow-headline">
                   <div>
-                    <strong>{index + 1}. {step.action}</strong>
-                    <span>{step.detail}</span>
-                    <em>{step.actor}</em>
+                    <p className="meta-label">Active repair file</p>
+                    <strong>{activeWorkflow.title}</strong>
+                    <span>{activeWorkflow.recommendedAction}</span>
                   </div>
+                  <StatusChip label={activeWorkflow.warrantyImpact} tone={activeWorkflow.tone} />
                 </div>
-              ))}
+
+                <div className="lifecycle-list">
+                  {activeWorkflow.steps.map((step, index) => (
+                    <div className="lifecycle-step" key={step.label}>
+                      <span className={`event-dot ${step.tone}`} />
+                      <div>
+                        <strong>{index + 1}. {step.label}</strong>
+                        <span>{step.detail}</span>
+                        <em>{activeWorkflow.shipmentTrace.status}</em>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="evidence-box">
+                  <p className="meta-label">Modification log</p>
+                  <ol className="care-list">
+                    {activeWorkflow.evidenceLog.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
             </div>
+            {workflowError && <p className="error">Backend workflow unavailable: {workflowError}</p>}
           </article>
 
-          <article className="panel recall-panel">
+          <article className="panel recall-panel" id="targeted-recalls">
             <div className="panel-header">
               <div>
                 <p className="meta-label">Targeted recall</p>
@@ -1072,7 +1258,7 @@ export default function App() {
             </p>
           </article>
 
-          <article className="panel care-panel">
+          <article className="panel care-panel" id="care-history">
             <div className="panel-header">
               <div>
                 <p className="meta-label">Care history</p>
@@ -1087,11 +1273,11 @@ export default function App() {
             </ol>
           </article>
 
-          <article className="panel status-panel">
+          <article className="panel status-panel" id="warranty-review">
             <div className="panel-header">
               <div>
-                <p className="meta-label">Statuses</p>
-                <h2>Evidence states</h2>
+                <p className="meta-label">Warranty review</p>
+                <h2>Evidence states and outcomes</h2>
               </div>
             </div>
             <div className="chip-cloud">
@@ -1119,7 +1305,7 @@ export default function App() {
             </div>
           </article>
 
-          <article className="panel activity-panel">
+          <article className="panel activity-panel" id="audit-trail">
             <div className="panel-header">
               <div>
                 <p className="meta-label">Audit Trail</p>

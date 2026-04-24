@@ -99,6 +99,13 @@ enum RepairEventItemAction {
   VERIFY_PRESENT
 }
 
+enum PartScanOutcome {
+  ORIGINAL_MATCH
+  ORIGINAL_MISMATCH
+  OEM_PART_RECOGNISED
+  UNKNOWN_SERIAL
+}
+
 enum CampaignStatus {
   DRAFT
   ACTIVE
@@ -163,7 +170,7 @@ model Assembly {
 }
 
 model AssemblyNode {
-  id            String           @id @default(uuid())
+  id            String               @id @default(uuid())
   assemblyUid   String
   parentNodeId  String?
   componentUid  String?
@@ -171,14 +178,15 @@ model AssemblyNode {
   label         String
   category      String?
   positionLabel String?
-  quantity      Int              @default(1)
-  sortOrder     Int              @default(0)
+  quantity      Int                  @default(1)
+  sortOrder     Int                  @default(0)
   path          String?
-  createdAt     DateTime         @default(now())
-  assembly      Assembly         @relation(fields: [assemblyUid], references: [assemblyUid], onDelete: Cascade)
-  parent        AssemblyNode?    @relation("AssemblyNodeHierarchy", fields: [parentNodeId], references: [id], onDelete: Cascade)
-  children      AssemblyNode[]   @relation("AssemblyNodeHierarchy")
-  component     Component?       @relation(fields: [componentUid], references: [componentUid], onDelete: SetNull)
+  createdAt     DateTime             @default(now())
+  assembly      Assembly             @relation(fields: [assemblyUid], references: [assemblyUid], onDelete: Cascade)
+  parent        AssemblyNode?        @relation("AssemblyNodeHierarchy", fields: [parentNodeId], references: [id], onDelete: Cascade)
+  children      AssemblyNode[]       @relation("AssemblyNodeHierarchy")
+  component     Component?           @relation(fields: [componentUid], references: [componentUid], onDelete: SetNull)
+  scanEvidence  RepairScanEvidence[]
 
   @@index([assemblyUid, parentNodeId, sortOrder])
   @@index([componentUid])
@@ -269,21 +277,22 @@ model AuthenticationEvent {
 }
 
 model RepairEvent {
-  id               String            @id @default(uuid())
+  id               String               @id @default(uuid())
   assemblyUid      String
   repairerId       String?
   openedByUserId   String?
-  status           RepairEventStatus @default(OPEN)
+  status           RepairEventStatus    @default(OPEN)
   reason           String
   warrantyClaimRef String?
   serviceOrderRef  String?
-  openedAt         DateTime          @default(now())
+  openedAt         DateTime             @default(now())
   closedAt         DateTime?
   notes            String?
-  assembly         Assembly          @relation(fields: [assemblyUid], references: [assemblyUid], onDelete: Cascade)
-  repairer         Repairer?         @relation(fields: [repairerId], references: [id], onDelete: SetNull)
-  openedBy         PlatformUser?     @relation("RepairEventOpenedBy", fields: [openedByUserId], references: [id], onDelete: SetNull)
+  assembly         Assembly             @relation(fields: [assemblyUid], references: [assemblyUid], onDelete: Cascade)
+  repairer         Repairer?            @relation(fields: [repairerId], references: [id], onDelete: SetNull)
+  openedBy         PlatformUser?        @relation("RepairEventOpenedBy", fields: [openedByUserId], references: [id], onDelete: SetNull)
   items            RepairEventItem[]
+  scanEvidence     RepairScanEvidence[]
 
   @@index([assemblyUid, openedAt])
   @@index([repairerId])
@@ -322,6 +331,33 @@ model RepairEventItem {
   @@index([membershipId])
   @@index([networkStatus, warrantyImpact])
   @@index([authenticatedByUserId])
+}
+
+model RepairScanEvidence {
+  id                    String               @id @default(uuid())
+  repairEventId         String
+  assemblyNodeId        String?
+  expectedSerial        String
+  scannedSerial         String
+  expectedPartNumber    String?
+  scannedPartNumber     String?
+  outcome               PartScanOutcome
+  oemPartRecognised     Boolean              @default(false)
+  shippedToOrganisation String?
+  shippedToRepairerTier RepairerTier?
+  networkStatus         NetworkFitmentStatus
+  warrantyImpact        WarrantyImpact       @default(UNKNOWN)
+  scannedAt             DateTime             @default(now())
+  notes                 String?
+  repairEvent           RepairEvent          @relation(fields: [repairEventId], references: [id], onDelete: Cascade)
+  assemblyNode          AssemblyNode?        @relation(fields: [assemblyNodeId], references: [id], onDelete: SetNull)
+
+  @@index([repairEventId])
+  @@index([assemblyNodeId])
+  @@index([expectedSerial])
+  @@index([scannedSerial])
+  @@index([outcome])
+  @@index([networkStatus, warrantyImpact])
 }
 
 model SafetyCampaign {
