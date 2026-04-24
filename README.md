@@ -10,6 +10,7 @@ The platform is built around these core principles:
 
 - register serialized OEM components
 - build vehicles and sub-assemblies as aggregations
+- model the whole vehicle as a searchable hierarchy of major systems, assemblies, sub-assemblies, components, and parts
 - authenticate fitted items by named users
 - classify fitment events by repairer network tier
 - book components off and back on during warranty or repair work
@@ -32,6 +33,7 @@ The core objects for VINtegrity are:
 
 - `Component`: a serialized OEM or replacement part
 - `Assembly`: the vehicle or sub-assembly being tracked
+- `AssemblyNode`: a node in the vehicle hierarchy, from the complete car down to individual parts
 - `AssemblyMembership`: which parts belong in that vehicle or sub-assembly
 - `AssemblySnapshot`: the expected sealed composition for warranty review
 - `Inspection`: a later vehicle or repair inspection
@@ -65,10 +67,12 @@ The GitHub repository is:
 
 1. Create vehicle and sub-assembly records.
 2. Register serialized OEM components.
-3. Add components into a vehicle assembly.
-4. Authenticate fitments by user and repairer tier.
-5. Seal the initial-sale assembly snapshot.
-6. Book components off and back on during repair work.
-7. Resolve recalls to vehicles carrying affected serialized parts.
-8. Inspect a vehicle later.
-9. Flag warranty-sensitive parts fitted outside the repairer network.
+3. Build the searchable vehicle assembly directory.
+4. Add major systems: engine, gearbox, suspension, bodywork, accessories, and interior.
+5. Break each major system into assemblies, sub-assemblies, components, and smallest parts.
+6. Authenticate fitments by user and repairer tier.
+7. Seal the initial-sale assembly snapshot.
+8. Book components off and back on during repair work.
+9. Resolve recalls to vehicles carrying affected serialized parts.
+10. Inspect a vehicle later.
+11. Flag warranty-sensitive parts fitted outside the repairer network.

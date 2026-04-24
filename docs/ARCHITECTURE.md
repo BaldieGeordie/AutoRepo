@@ -9,6 +9,7 @@ The platform is operated by AuthLine Auto, the automotive industry arm of parent
 The main asset is the vehicle aggregation itself. Value comes from trusted knowledge of:
 
 - what a vehicle or sub-assembly should contain
+- how the whole vehicle breaks down into major systems, assemblies, sub-assemblies, components, and parts
 - who authenticated each fitted item
 - whether the repairer was OEM, approved, tier 2/certified, or outside the network
 - which components were booked off and back on during warranty or repair work
@@ -36,6 +37,12 @@ A serialized physical part or module.
 ### Assembly
 
 The vehicle or sub-assembly whose component composition matters for warranty review.
+
+### Assembly Node
+
+A searchable hierarchy node within a vehicle assembly. Nodes can represent the complete vehicle, a major system, an assembly, a sub-assembly, a component, or a smallest tracked part.
+
+This is the main product model until manufacturer schematics are available. Schematics should later link to the same nodes rather than replacing the evidence model.
 
 ### Assembly Membership
 
@@ -102,13 +109,16 @@ The starter schema already assumes target abstraction rather than hard-coding on
 The first meaningful end-to-end demo should prove:
 
 1. an assembly is created
-2. trusted serialized components are added
-3. fitments are authenticated by user and repairer tier
-4. the initial-sale snapshot is sealed and queued for evidence anchoring
-5. a warranty or repair event books parts off and back on the vehicle
-6. a recall campaign is resolved to vehicles carrying affected components
-7. the assembly is inspected later
-8. the platform flags warranty-relevant variance:
+2. a searchable assembly tree is created for the whole car
+3. major systems are added: engine, gearbox, suspension, bodywork, accessories, and interior
+4. each major system is broken down into assemblies, sub-assemblies, components, and parts
+5. trusted serialized components are attached to the relevant tree nodes
+6. fitments are authenticated by user and repairer tier
+7. the initial-sale snapshot is sealed and queued for evidence anchoring
+8. a warranty or repair event books parts off and back on the vehicle
+9. a recall campaign is resolved to vehicles carrying affected components
+10. the assembly is inspected later
+11. the platform flags warranty-relevant variance:
    - missing component
    - unexpected added component
    - substituted component

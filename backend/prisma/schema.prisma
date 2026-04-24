@@ -37,6 +37,15 @@ enum ComponentState {
   RETIRED
 }
 
+enum AssemblyNodeKind {
+  VEHICLE
+  MAJOR_SYSTEM
+  ASSEMBLY
+  SUB_ASSEMBLY
+  COMPONENT
+  PART
+}
+
 enum InspectionResult {
   MATCH
   MISMATCH
@@ -125,6 +134,7 @@ model Component {
   repairItems          RepairEventItem[]          @relation("RepairItemComponent")
   replacementItems     RepairEventItem[]          @relation("RepairItemReplacementFor")
   campaignExposures    AssemblyCampaignExposure[]
+  assemblyNodes        AssemblyNode[]
 
   @@index([partNumber])
   @@index([manufacturer])
@@ -141,6 +151,7 @@ model Assembly {
   datamatrixPayload    String?                    @unique
   createdAt            DateTime                   @default(now())
   memberships          AssemblyMembership[]
+  nodes                AssemblyNode[]
   snapshots            AssemblySnapshot[]
   inspections          Inspection[]
   repairEvents         RepairEvent[]
@@ -149,6 +160,30 @@ model Assembly {
 
   @@index([assetType])
   @@index([label])
+}
+
+model AssemblyNode {
+  id            String           @id @default(uuid())
+  assemblyUid   String
+  parentNodeId  String?
+  componentUid  String?
+  kind          AssemblyNodeKind
+  label         String
+  category      String?
+  positionLabel String?
+  quantity      Int              @default(1)
+  sortOrder     Int              @default(0)
+  path          String?
+  createdAt     DateTime         @default(now())
+  assembly      Assembly         @relation(fields: [assemblyUid], references: [assemblyUid], onDelete: Cascade)
+  parent        AssemblyNode?    @relation("AssemblyNodeHierarchy", fields: [parentNodeId], references: [id], onDelete: Cascade)
+  children      AssemblyNode[]   @relation("AssemblyNodeHierarchy")
+  component     Component?       @relation(fields: [componentUid], references: [componentUid], onDelete: SetNull)
+
+  @@index([assemblyUid, parentNodeId, sortOrder])
+  @@index([componentUid])
+  @@index([kind])
+  @@index([path])
 }
 
 model AssemblyMembership {

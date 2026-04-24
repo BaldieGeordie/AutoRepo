@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type MetaResponse = {
   company: {
@@ -37,13 +37,13 @@ type VehicleRecord = {
   lastCheck: string;
 };
 
-type TwinComponent = {
+type AggregationNode = {
   id: string;
   label: string;
-  role: string;
-  serial: string;
-  partNumber: string;
-  fitment: string;
+  nodeType: string;
+  category: string;
+  serial?: string;
+  partNumber?: string;
   status: string;
   tone: Tone;
   anchorRef: string;
@@ -55,8 +55,14 @@ type TwinComponent = {
   authenticatorRole: string;
   warrantyImpact: string;
   recallExposure: string;
-  x: number;
-  y: number;
+  quantity: number;
+  children?: AggregationNode[];
+};
+
+type TreeRow = AggregationNode & {
+  depth: number;
+  path: string;
+  childCount: number;
 };
 
 const apiBase = import.meta.env.VITE_API_BASE || "/api/v1";
@@ -64,8 +70,8 @@ const apiBase = import.meta.env.VITE_API_BASE || "/api/v1";
 const navigation = [
   "Dashboard",
   "Vehicles",
+  "Assembly Directory",
   "Components",
-  "Assemblies",
   "Repairer Network",
   "Authenticated Repairs",
   "Warranty Reviews",
@@ -79,30 +85,27 @@ const navigation = [
 
 const metrics: Array<{ label: string; value: string; delta: string; tone: Tone }> = [
   { label: "Warranty Vehicles", value: "18,420", delta: "+6.4% 30d", tone: "cyan" },
-  { label: "Authenticated Parts", value: "241,908", delta: "99.2% verified", tone: "green" },
-  { label: "Open Repair Events", value: "184", delta: "42 awaiting auth", tone: "amber" },
-  { label: "Outside-network Fits", value: "2,961", delta: "warranty signal", tone: "steel" },
+  { label: "Assembly Nodes", value: "684,210", delta: "multi-level tree", tone: "green" },
+  { label: "Leaf Components", value: "241,908", delta: "99.2% verified", tone: "green" },
+  { label: "Major Systems", value: "92,100", delta: "engine to interior", tone: "cyan" },
   { label: "Booked Part Changes", value: "8,742", delta: "off/on evidenced", tone: "cyan" },
   { label: "Focused Recall VINs", value: "27", delta: "8 critical", tone: "red" },
-  { label: "OEM Repairers", value: "312", delta: "14 markets", tone: "green" },
-  { label: "Care History Score", value: "96.4%", delta: "buyer-visible proof", tone: "green" },
+  { label: "Open Repair Events", value: "184", delta: "42 awaiting auth", tone: "amber" },
+  { label: "Outside-network Fits", value: "2,961", delta: "warranty signal", tone: "steel" },
 ];
 
 const statusChips: Array<{ label: string; tone: Tone }> = [
   { label: "OEM Authenticated", tone: "green" },
   { label: "Factory Fit", tone: "cyan" },
   { label: "Approved Repairer", tone: "green" },
-  { label: "Tier 2 Repairer", tone: "cyan" },
-  { label: "Outside Network", tone: "steel" },
-  { label: "Authentication Pending", tone: "amber" },
-  { label: "Warranty Review", tone: "amber" },
-  { label: "Repair Booked", tone: "cyan" },
-  { label: "Owner Fitment Logged", tone: "steel" },
-  { label: "Evidence Missing", tone: "red" },
+  { label: "Sub-Assembly", tone: "cyan" },
   { label: "Part Replaced", tone: "steel" },
+  { label: "Repair Booked", tone: "cyan" },
+  { label: "Outside Network", tone: "steel" },
+  { label: "Warranty Review", tone: "amber" },
   { label: "Recall Targeted", tone: "red" },
-  { label: "Recall Affected", tone: "red" },
   { label: "Recall Cleared", tone: "green" },
+  { label: "Evidence Missing", tone: "red" },
 ];
 
 const vehicleRecords: VehicleRecord[] = [
@@ -144,142 +147,434 @@ const vehicleRecords: VehicleRecord[] = [
   },
 ];
 
-const twinComponents: TwinComponent[] = [
-  {
-    id: "vin-plate",
-    label: "VIN Plate",
-    role: "Vehicle identity",
-    serial: "VIN-WVWZZZCD7NW184201",
-    partNumber: "VEHICLE-IDENTITY-PLATE",
-    fitment: "Factory fit",
-    status: "Verified",
-    tone: "green",
-    anchorRef: "snap_vehicle_identity_184201",
-    standard: "OEM standard",
-    fittedBy: "OEM plant 04",
-    repairerTier: "OEM manufacturing",
-    networkStatus: "Inside OEM network",
-    authenticatedBy: "H. Richter",
-    authenticatorRole: "OEM release authority",
-    warrantyImpact: "No repair-network exception. Vehicle identity is OEM-authenticated.",
-    recallExposure: "No open campaign exposure.",
-    x: 50,
-    y: 34,
-  },
-  {
-    id: "battery",
-    label: "Battery Module",
-    role: "Energy system",
-    serial: "BAT-10291-K",
-    partNumber: "BATTERY-MODULE-10291",
-    fitment: "Factory fit",
-    status: "Verified",
-    tone: "green",
-    anchorRef: "snap_battery_module_10291",
-    standard: "OEM standard",
-    fittedBy: "OEM plant 04",
-    repairerTier: "OEM manufacturing",
-    networkStatus: "Inside OEM network",
-    authenticatedBy: "A. Walker",
-    authenticatorRole: "OEM component release",
-    warrantyImpact: "Factory-fit evidence supports normal OEM warranty assessment.",
-    recallExposure: "No open campaign exposure.",
-    x: 50,
-    y: 64,
-  },
-  {
-    id: "drive-unit",
-    label: "Front Drive Unit",
-    role: "Propulsion",
-    serial: "MTR-44721-A",
-    partNumber: "MOTOR-AXL-44721",
-    fitment: "Approved fitment",
-    status: "Approved Repairer",
-    tone: "cyan",
-    anchorRef: "snap_drive_unit_44721",
-    standard: "OEM replacement standard",
-    fittedBy: "Northgate OEM Service",
-    repairerTier: "OEM repairer",
-    networkStatus: "Inside approved repairer network",
-    authenticatedBy: "M. Kaur",
-    authenticatorRole: "Approved repairer technician",
-    warrantyImpact: "Replacement remains within OEM-supported repairer network.",
-    recallExposure: "No open campaign exposure.",
-    x: 24,
-    y: 56,
-  },
-  {
-    id: "adas",
-    label: "ADAS Sensor",
-    role: "Driver assistance",
-    serial: "ADAS-99015-R",
-    partNumber: "SENSOR-ADAS-99015",
-    fitment: "Inspection required",
-    status: "Warranty Review",
-    tone: "amber",
-    anchorRef: "snap_adas_sensor_99015",
-    standard: "Aftermarket serial observed",
-    fittedBy: "Independent workshop recorded",
-    repairerTier: "Outside network",
-    networkStatus: "Outside approved warranty network",
-    authenticatedBy: "Self-declared repair record",
-    authenticatorRole: "Non-network workshop",
-    warrantyImpact: "OEM can see the ADAS part was fitted outside the repairer network before deciding warranty impact.",
-    recallExposure: "SC-ADAS-27F targets vehicles carrying affected ADAS sensor serials.",
-    x: 77,
-    y: 42,
-  },
-  {
-    id: "ecu",
-    label: "Vehicle ECU",
-    role: "Control system",
-    serial: "ECU-38114-C",
-    partNumber: "CONTROL-ECU-38114",
-    fitment: "Factory fit",
-    status: "Verified",
-    tone: "green",
-    anchorRef: "snap_ecu_38114",
-    standard: "OEM standard",
-    fittedBy: "OEM plant 04",
-    repairerTier: "OEM manufacturing",
-    networkStatus: "Inside OEM network",
-    authenticatedBy: "N. Okafor",
-    authenticatorRole: "OEM component release",
-    warrantyImpact: "Control module evidence supports warranty diagnostics.",
-    recallExposure: "No open campaign exposure.",
-    x: 67,
-    y: 60,
-  },
-];
+const demoAggregationRoot: AggregationNode = {
+  id: "veh-wvw184201",
+  label: "WVWZZZCD7NW184201",
+  nodeType: "Vehicle",
+  category: "Complete vehicle",
+  serial: "VIN-WVWZZZCD7NW184201",
+  partNumber: "VEHICLE-RECORD",
+  status: "OEM Authenticated",
+  tone: "green",
+  anchorRef: "snap_demo_expected_0001",
+  standard: "Initial-sale sealed vehicle composition",
+  fittedBy: "OEM plant 04",
+  repairerTier: "OEM manufacturing",
+  networkStatus: "Inside OEM network",
+  authenticatedBy: "H. Richter",
+  authenticatorRole: "OEM release authority",
+  warrantyImpact: "Primary aggregation baseline for the whole car.",
+  recallExposure: "No vehicle-level campaign exposure.",
+  quantity: 1,
+  children: [
+    {
+      id: "sys-powertrain",
+      label: "Powertrain",
+      nodeType: "Major system",
+      category: "Engine and gearbox",
+      status: "Verified",
+      tone: "green",
+      anchorRef: "snap_powertrain_184201",
+      standard: "OEM powertrain specification",
+      fittedBy: "OEM plant 04",
+      repairerTier: "OEM manufacturing",
+      networkStatus: "Inside OEM network",
+      authenticatedBy: "A. Walker",
+      authenticatorRole: "OEM component release",
+      warrantyImpact: "Powertrain system is inside the initial-sale baseline.",
+      recallExposure: "No open campaign exposure.",
+      quantity: 1,
+      children: [
+        {
+          id: "asm-engine",
+          label: "Electric drive unit",
+          nodeType: "Assembly",
+          category: "Engine equivalent",
+          serial: "MTR-44721-A",
+          partNumber: "MOTOR-AXL-44721",
+          status: "Approved Repairer",
+          tone: "cyan",
+          anchorRef: "snap_drive_unit_44721",
+          standard: "OEM replacement standard",
+          fittedBy: "Northgate OEM Service",
+          repairerTier: "OEM repairer",
+          networkStatus: "Inside approved repairer network",
+          authenticatedBy: "M. Kaur",
+          authenticatorRole: "Approved repairer technician",
+          warrantyImpact: "Replacement remains within OEM-supported repairer network.",
+          recallExposure: "No open campaign exposure.",
+          quantity: 1,
+          children: [
+            {
+              id: "sub-motor-stator",
+              label: "Motor stator module",
+              nodeType: "Sub-assembly",
+              category: "Propulsion internals",
+              serial: "STA-44721-01",
+              partNumber: "MOTOR-STATOR-44721",
+              status: "Verified",
+              tone: "green",
+              anchorRef: "snap_stator_44721",
+              standard: "OEM standard",
+              fittedBy: "OEM plant 04",
+              repairerTier: "OEM manufacturing",
+              networkStatus: "Inside OEM network",
+              authenticatedBy: "A. Walker",
+              authenticatorRole: "OEM component release",
+              warrantyImpact: "Normal warranty evidence.",
+              recallExposure: "No open campaign exposure.",
+              quantity: 1,
+            },
+            {
+              id: "part-inverter",
+              label: "Inverter control module",
+              nodeType: "Component",
+              category: "Power electronics",
+              serial: "INV-44721-09",
+              partNumber: "INVERTER-CTRL-44721",
+              status: "Verified",
+              tone: "green",
+              anchorRef: "snap_inverter_44721",
+              standard: "OEM standard",
+              fittedBy: "OEM plant 04",
+              repairerTier: "OEM manufacturing",
+              networkStatus: "Inside OEM network",
+              authenticatedBy: "N. Okafor",
+              authenticatorRole: "OEM component release",
+              warrantyImpact: "Supports powertrain warranty diagnostics.",
+              recallExposure: "No open campaign exposure.",
+              quantity: 1,
+            },
+          ],
+        },
+        {
+          id: "asm-gearbox",
+          label: "Reduction gearbox",
+          nodeType: "Assembly",
+          category: "Gearbox",
+          serial: "GBX-55819-F",
+          partNumber: "GEARBOX-REDUCTION-55819",
+          status: "Verified",
+          tone: "green",
+          anchorRef: "snap_gearbox_55819",
+          standard: "OEM standard",
+          fittedBy: "OEM plant 04",
+          repairerTier: "OEM manufacturing",
+          networkStatus: "Inside OEM network",
+          authenticatedBy: "H. Richter",
+          authenticatorRole: "OEM release authority",
+          warrantyImpact: "Inside initial-sale baseline.",
+          recallExposure: "No open campaign exposure.",
+          quantity: 1,
+        },
+      ],
+    },
+    {
+      id: "sys-chassis",
+      label: "Suspension and braking",
+      nodeType: "Major system",
+      category: "Chassis",
+      status: "Verified",
+      tone: "green",
+      anchorRef: "snap_chassis_184201",
+      standard: "OEM chassis specification",
+      fittedBy: "OEM plant 04",
+      repairerTier: "OEM manufacturing",
+      networkStatus: "Inside OEM network",
+      authenticatedBy: "A. Walker",
+      authenticatorRole: "OEM component release",
+      warrantyImpact: "No chassis exception recorded.",
+      recallExposure: "No open campaign exposure.",
+      quantity: 1,
+      children: [
+        {
+          id: "asm-front-suspension",
+          label: "Front suspension module",
+          nodeType: "Assembly",
+          category: "Suspension",
+          serial: "SUS-FRT-184201",
+          partNumber: "SUSPENSION-FRONT-MODULE",
+          status: "Verified",
+          tone: "green",
+          anchorRef: "snap_front_suspension_184201",
+          standard: "OEM standard",
+          fittedBy: "OEM plant 04",
+          repairerTier: "OEM manufacturing",
+          networkStatus: "Inside OEM network",
+          authenticatedBy: "A. Walker",
+          authenticatorRole: "OEM component release",
+          warrantyImpact: "Factory-fit evidence.",
+          recallExposure: "No open campaign exposure.",
+          quantity: 1,
+          children: [
+            {
+              id: "part-left-damper",
+              label: "Left front damper",
+              nodeType: "Component",
+              category: "Suspension part",
+              serial: "DMP-LF-88102",
+              partNumber: "DAMPER-FRONT-LH",
+              status: "Verified",
+              tone: "green",
+              anchorRef: "snap_damper_lf_88102",
+              standard: "OEM standard",
+              fittedBy: "OEM plant 04",
+              repairerTier: "OEM manufacturing",
+              networkStatus: "Inside OEM network",
+              authenticatedBy: "A. Walker",
+              authenticatorRole: "OEM component release",
+              warrantyImpact: "Factory-fit evidence.",
+              recallExposure: "No open campaign exposure.",
+              quantity: 1,
+            },
+            {
+              id: "part-wheel-speed",
+              label: "Wheel speed sensor",
+              nodeType: "Component",
+              category: "Brake electronics",
+              serial: "WSS-33019-LF",
+              partNumber: "SENSOR-WHEEL-SPEED-LF",
+              status: "Verified",
+              tone: "green",
+              anchorRef: "snap_wss_lf_33019",
+              standard: "OEM standard",
+              fittedBy: "OEM plant 04",
+              repairerTier: "OEM manufacturing",
+              networkStatus: "Inside OEM network",
+              authenticatedBy: "N. Okafor",
+              authenticatorRole: "OEM component release",
+              warrantyImpact: "Factory-fit evidence.",
+              recallExposure: "No open campaign exposure.",
+              quantity: 1,
+            },
+          ],
+        },
+        {
+          id: "asm-brake-system",
+          label: "Brake system",
+          nodeType: "Assembly",
+          category: "Braking",
+          serial: "BRK-184201-A",
+          partNumber: "BRAKE-SYSTEM-184201",
+          status: "Verified",
+          tone: "green",
+          anchorRef: "snap_brake_system_184201",
+          standard: "OEM standard",
+          fittedBy: "OEM plant 04",
+          repairerTier: "OEM manufacturing",
+          networkStatus: "Inside OEM network",
+          authenticatedBy: "N. Okafor",
+          authenticatorRole: "OEM component release",
+          warrantyImpact: "Factory-fit evidence.",
+          recallExposure: "No open campaign exposure.",
+          quantity: 1,
+        },
+      ],
+    },
+    {
+      id: "sys-body",
+      label: "Bodywork and structure",
+      nodeType: "Major system",
+      category: "Body shell and panels",
+      status: "Verified",
+      tone: "green",
+      anchorRef: "snap_body_184201",
+      standard: "OEM body specification",
+      fittedBy: "OEM plant 04",
+      repairerTier: "OEM manufacturing",
+      networkStatus: "Inside OEM network",
+      authenticatedBy: "H. Richter",
+      authenticatorRole: "OEM release authority",
+      warrantyImpact: "No structural exception recorded.",
+      recallExposure: "No open campaign exposure.",
+      quantity: 1,
+      children: [
+        {
+          id: "asm-body-shell",
+          label: "Body shell",
+          nodeType: "Assembly",
+          category: "Structure",
+          serial: "BODY-184201",
+          partNumber: "BODY-SHELL-ID7",
+          status: "Verified",
+          tone: "green",
+          anchorRef: "snap_body_shell_184201",
+          standard: "OEM standard",
+          fittedBy: "OEM plant 04",
+          repairerTier: "OEM manufacturing",
+          networkStatus: "Inside OEM network",
+          authenticatedBy: "H. Richter",
+          authenticatorRole: "OEM release authority",
+          warrantyImpact: "Factory-fit evidence.",
+          recallExposure: "No open campaign exposure.",
+          quantity: 1,
+        },
+        {
+          id: "part-front-bumper",
+          label: "Front bumper cover",
+          nodeType: "Component",
+          category: "Exterior panel",
+          serial: "BMP-FRT-77201",
+          partNumber: "BUMPER-FRONT-ID7",
+          status: "Part Replaced",
+          tone: "steel",
+          anchorRef: "snap_bumper_front_77201",
+          standard: "OEM replacement standard",
+          fittedBy: "Northgate OEM Service",
+          repairerTier: "OEM repairer",
+          networkStatus: "Inside approved repairer network",
+          authenticatedBy: "M. Kaur",
+          authenticatorRole: "Approved repairer technician",
+          warrantyImpact: "Replacement booked on with approved repair evidence.",
+          recallExposure: "No open campaign exposure.",
+          quantity: 1,
+        },
+      ],
+    },
+    {
+      id: "sys-interior",
+      label: "Interior and safety",
+      nodeType: "Major system",
+      category: "Cabin and restraint systems",
+      status: "Verified",
+      tone: "green",
+      anchorRef: "snap_interior_184201",
+      standard: "OEM interior specification",
+      fittedBy: "OEM plant 04",
+      repairerTier: "OEM manufacturing",
+      networkStatus: "Inside OEM network",
+      authenticatedBy: "N. Okafor",
+      authenticatorRole: "OEM component release",
+      warrantyImpact: "No interior exception recorded.",
+      recallExposure: "No open campaign exposure.",
+      quantity: 1,
+      children: [
+        {
+          id: "part-airbag-ecu",
+          label: "Airbag ECU",
+          nodeType: "Component",
+          category: "Safety electronics",
+          serial: "SRS-90112-C",
+          partNumber: "CONTROL-AIRBAG-90112",
+          status: "Verified",
+          tone: "green",
+          anchorRef: "snap_airbag_ecu_90112",
+          standard: "OEM standard",
+          fittedBy: "OEM plant 04",
+          repairerTier: "OEM manufacturing",
+          networkStatus: "Inside OEM network",
+          authenticatedBy: "N. Okafor",
+          authenticatorRole: "OEM component release",
+          warrantyImpact: "Factory-fit safety evidence.",
+          recallExposure: "No open campaign exposure.",
+          quantity: 1,
+        },
+        {
+          id: "asm-driver-seat",
+          label: "Driver seat assembly",
+          nodeType: "Assembly",
+          category: "Interior",
+          serial: "SEAT-D-30219",
+          partNumber: "SEAT-DRIVER-ID7",
+          status: "Verified",
+          tone: "green",
+          anchorRef: "snap_driver_seat_30219",
+          standard: "OEM standard",
+          fittedBy: "OEM plant 04",
+          repairerTier: "OEM manufacturing",
+          networkStatus: "Inside OEM network",
+          authenticatedBy: "A. Walker",
+          authenticatorRole: "OEM component release",
+          warrantyImpact: "Factory-fit evidence.",
+          recallExposure: "No open campaign exposure.",
+          quantity: 1,
+        },
+      ],
+    },
+    {
+      id: "sys-accessories",
+      label: "Accessories and electronics",
+      nodeType: "Major system",
+      category: "Control, sensing, and convenience",
+      status: "Warranty Review",
+      tone: "amber",
+      anchorRef: "snap_accessories_184201",
+      standard: "OEM electronics specification",
+      fittedBy: "Mixed repair evidence",
+      repairerTier: "Mixed",
+      networkStatus: "One component outside approved warranty network",
+      authenticatedBy: "Warranty operations",
+      authenticatorRole: "OEM reviewer",
+      warrantyImpact: "System contains a sensor fitment requiring warranty review.",
+      recallExposure: "SC-ADAS-27F applies to affected ADAS serials.",
+      quantity: 1,
+      children: [
+        {
+          id: "part-adas-sensor",
+          label: "Driver assistance sensor",
+          nodeType: "Component",
+          category: "ADAS",
+          serial: "ADAS-99015-R",
+          partNumber: "SENSOR-ADAS-99015",
+          status: "Warranty Review",
+          tone: "amber",
+          anchorRef: "snap_adas_sensor_99015",
+          standard: "Aftermarket serial observed",
+          fittedBy: "Independent workshop recorded",
+          repairerTier: "Outside network",
+          networkStatus: "Outside approved warranty network",
+          authenticatedBy: "Self-declared repair record",
+          authenticatorRole: "Non-network workshop",
+          warrantyImpact: "OEM can see this ADAS part was fitted outside the repairer network.",
+          recallExposure: "SC-ADAS-27F targets vehicles carrying affected ADAS sensor serials.",
+          quantity: 1,
+        },
+        {
+          id: "part-infotainment",
+          label: "Infotainment head unit",
+          nodeType: "Component",
+          category: "Accessory electronics",
+          serial: "INFO-77120-D",
+          partNumber: "HEADUNIT-INFOTAINMENT-ID7",
+          status: "Verified",
+          tone: "green",
+          anchorRef: "snap_infotainment_77120",
+          standard: "OEM standard",
+          fittedBy: "OEM plant 04",
+          repairerTier: "OEM manufacturing",
+          networkStatus: "Inside OEM network",
+          authenticatedBy: "N. Okafor",
+          authenticatorRole: "OEM component release",
+          warrantyImpact: "Factory-fit evidence.",
+          recallExposure: "No open campaign exposure.",
+          quantity: 1,
+        },
+      ],
+    },
+  ],
+};
 
 const eventFeed = [
   {
-    event: "Authenticate component",
-    subject: "Battery module BAT-10291-K authenticated into assembly ASM-VEH-WVW184201",
-    actor: "OEM plant 04 · A. Walker",
+    event: "Assembly node authenticated",
+    subject: "Powertrain tree sealed beneath assembly ASM-VEH-WVW184201",
+    actor: "OEM plant 04 - A. Walker",
     time: "09:42",
     tone: "cyan" as Tone,
   },
   {
-    event: "Outside-network fitment logged",
-    subject: "Driver assistance sensor replacement linked to warranty review",
-    actor: "West Quay Autocare",
+    event: "Part booked off",
+    subject: "Driver assistance sensor ADAS-99015-R removed from Accessories and electronics",
+    actor: "Northgate OEM Service - M. Kaur",
     time: "10:18",
     tone: "amber" as Tone,
   },
   {
     event: "Warranty impact review",
-    subject: "OEM reviewer flagged non-network ADAS fitment before claim decision",
+    subject: "OEM reviewer flagged non-network ADAS fitment inside the component tree",
     actor: "Warranty operations",
     time: "10:31",
     tone: "red" as Tone,
-  },
-  {
-    event: "Tier 2 repair authenticated",
-    subject: "Body control module replacement authenticated by certified repairer",
-    actor: "Metro Fleet Service · J. Patel",
-    time: "10:47",
-    tone: "steel" as Tone,
   },
   {
     event: "Recall exposure focused",
@@ -290,30 +585,24 @@ const eventFeed = [
   },
 ];
 
-const custodyStages = [
-  "OEM Build",
-  "OEM Repairer",
-  "Tier 2 Repairer",
-  "Outside Network",
-  "Warranty Review",
-];
+const custodyStages = ["OEM Build", "Approved Repair", "Book Off", "Book On", "Warranty Review"];
 
 const repairLifecycle = [
   {
     action: "Verify present",
-    detail: "ADAS-99015-R confirmed against the initial-sale vehicle snapshot.",
-    actor: "M. Kaur · OEM repairer",
+    detail: "ADAS-99015-R confirmed under Accessories and electronics before work starts.",
+    actor: "M. Kaur - OEM repairer",
     tone: "green" as Tone,
   },
   {
     action: "Book off",
-    detail: "Faulting ADAS sensor removed from assembly ASM-VEH-WVW184201.",
+    detail: "Faulting sensor removed from its assembly-node position.",
     actor: "Service order SO-WTY-184201-044",
     tone: "cyan" as Tone,
   },
   {
     action: "Book on",
-    detail: "Replacement ADAS-99177-X fitted, but source evidence is outside the OEM network.",
+    detail: "Replacement sensor linked back to the same tree position with fitment evidence.",
     actor: "Warranty review required",
     tone: "amber" as Tone,
   },
@@ -322,19 +611,88 @@ const repairLifecycle = [
 const recallExposure = {
   campaignCode: "SC-ADAS-27F",
   title: "ADAS sensor water ingress safety campaign",
-  target: "SENSOR-ADAS-99015 · serial prefix ADAS-99",
+  target: "SENSOR-ADAS-99015 / serial prefix ADAS-99",
   focusedVehicles: "27",
   status: "Repair Booked",
   tone: "red" as Tone,
 };
 
 const careHistory = [
-  "Initial-sale composition sealed for the vehicle.",
-  "Warranty repair opened against a service order and claim reference.",
-  "Part removed from the car is booked off by a named repairer user.",
-  "Replacement fitted to the car is booked on with serial-level evidence.",
-  "Recall exposure clears only when the affected component is removed and replacement evidence is authenticated.",
+  "Initial-sale composition sealed as a whole-vehicle tree.",
+  "Major systems and sub-assemblies preserve their own serial-level evidence.",
+  "Repair work books components off and back on at the same tree position.",
+  "Recall exposure resolves from affected parts to vehicles carrying those parts.",
+  "Future buyers can see system-level and component-level care history.",
 ];
+
+function flattenTree(node: AggregationNode, depth = 0, path: string[] = []): TreeRow[] {
+  const nextPath = [...path, node.label];
+  const childRows = (node.children || []).flatMap((child) => flattenTree(child, depth + 1, nextPath));
+  return [
+    {
+      ...node,
+      depth,
+      path: nextPath.join(" / "),
+      childCount: node.children?.length || 0,
+    },
+    ...childRows,
+  ];
+}
+
+function nodeContainsQuery(node: AggregationNode, query: string) {
+  const haystack = [
+    node.label,
+    node.nodeType,
+    node.category,
+    node.serial,
+    node.partNumber,
+    node.status,
+    node.standard,
+    node.fittedBy,
+    node.repairerTier,
+    node.networkStatus,
+    node.authenticatedBy,
+    node.warrantyImpact,
+    node.recallExposure,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return haystack.includes(query);
+}
+
+function filterTree(node: AggregationNode, query: string): AggregationNode | null {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) {
+    return node;
+  }
+
+  const filteredChildren = (node.children || [])
+    .map((child) => filterTree(child, normalized))
+    .filter((child): child is AggregationNode => Boolean(child));
+
+  if (nodeContainsQuery(node, normalized) || filteredChildren.length > 0) {
+    return {
+      ...node,
+      children: filteredChildren,
+    };
+  }
+
+  return null;
+}
+
+function countLeafNodes(node: AggregationNode): number {
+  if (!node.children?.length) {
+    return 1;
+  }
+
+  return node.children.reduce((total, child) => total + countLeafNodes(child), 0);
+}
+
+function displayValue(value: string | number | undefined) {
+  return value === undefined || value === "" ? "Not recorded" : value;
+}
 
 function Wordmark() {
   return (
@@ -362,13 +720,19 @@ function StatusChip({ label, tone }: { label: string; tone: Tone }) {
 
 export default function App() {
   const [meta, setMeta] = useState<MetaResponse | null>(null);
+  const [aggregationRoot, setAggregationRoot] = useState<AggregationNode>(demoAggregationRoot);
   const [error, setError] = useState<string | null>(null);
+  const [treeError, setTreeError] = useState<string | null>(null);
   const [selectedVehicleVin, setSelectedVehicleVin] = useState(vehicleRecords[0].vin);
-  const [selectedComponentId, setSelectedComponentId] = useState(twinComponents[1].id);
+  const [selectedNodeId, setSelectedNodeId] = useState("asm-engine");
+  const [directoryQuery, setDirectoryQuery] = useState("");
 
   const selectedVehicle = vehicleRecords.find((record) => record.vin === selectedVehicleVin) || vehicleRecords[0];
-  const selectedComponent =
-    twinComponents.find((component) => component.id === selectedComponentId) || twinComponents[0];
+  const allRows = useMemo(() => flattenTree(aggregationRoot), [aggregationRoot]);
+  const filteredRoot = useMemo(() => filterTree(aggregationRoot, directoryQuery), [aggregationRoot, directoryQuery]);
+  const visibleRows = useMemo(() => (filteredRoot ? flattenTree(filteredRoot) : []), [filteredRoot]);
+  const selectedNode = allRows.find((row) => row.id === selectedNodeId) || allRows[0];
+  const leafCount = useMemo(() => countLeafNodes(aggregationRoot), [aggregationRoot]);
 
   useEffect(() => {
     fetch(`${apiBase}/meta`)
@@ -380,6 +744,16 @@ export default function App() {
       })
       .then(setMeta)
       .catch((err: Error) => setError(err.message));
+
+    fetch(`${apiBase}/assemblies/demo/tree`)
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((payload: { root: AggregationNode }) => setAggregationRoot(payload.root))
+      .catch((err: Error) => setTreeError(err.message));
   }, []);
 
   return (
@@ -404,21 +778,21 @@ export default function App() {
       <main className="dashboard">
         <header className="topbar">
           <div>
-            <p className="meta-label">AuthLine Auto · OEM warranty intelligence</p>
-            <h1>Repair Network Evidence Dashboard</h1>
+            <p className="meta-label">AuthLine Auto - OEM warranty intelligence</p>
+            <h1>Vehicle Assembly Directory</h1>
             <p className="subtitle">
-              AuthLine Auto gives manufacturers a control surface to track vehicle assemblies, component
-              authentication, repairer network tier, and evidence that shows whether warranty-period parts were fitted
-              inside or outside the OEM repairer network.
+              AuthLine Auto gives manufacturers a control surface for the complete car: major systems, assemblies,
+              sub-assemblies, components, smallest parts, repair evidence, recall exposure, and warranty-sensitive
+              fitment history.
             </p>
           </div>
           <div className="header-actions" aria-label="Verification summary">
             <div className="signal">
               <span className="signal-dot" />
-              Live authentication
+              Live hierarchy
             </div>
             <button type="button" className="primary-action">
-              Verify Fitment
+              Verify Node
             </button>
           </div>
         </header>
@@ -427,8 +801,8 @@ export default function App() {
           <div>
             <p className="meta-label">Positioning</p>
             <strong>
-              VINtegrity by AuthLine Auto: aggregation evidence for OEM warranty decisions, targeted recalls, and
-              repairer-network transparency.
+              VINtegrity by AuthLine Auto: a searchable aggregation record from the whole vehicle down to individual
+              parts.
             </strong>
           </div>
           <div className="vin-plate" aria-label="VIN sample">
@@ -450,143 +824,151 @@ export default function App() {
         </section>
 
         <section className="workspace-grid">
-          <article className="panel twin-panel">
+          <article className="panel aggregation-panel">
             <div className="panel-header">
               <div>
                 <p className="meta-label">Vehicle Aggregation</p>
-                <h2>Digital twin repair-network evidence map</h2>
+                <h2>Searchable assembly directory</h2>
               </div>
               <StatusChip label={selectedVehicle.status} tone={selectedVehicle.tone} />
             </div>
 
-            <div className="twin-layout">
-              <div className="vehicle-visual" aria-label={`${selectedVehicle.vin} component map`}>
-                <svg viewBox="0 0 760 320" role="img" aria-labelledby="vehicle-map-title">
-                  <title id="vehicle-map-title">Vehicle digital twin for {selectedVehicle.vin}</title>
-                  <defs>
-                    <linearGradient id="bodyChrome" x1="0%" x2="100%" y1="0%" y2="0%">
-                      <stop offset="0%" stopColor="#0B111B" />
-                      <stop offset="45%" stopColor="#182132" />
-                      <stop offset="100%" stopColor="#0B111B" />
-                    </linearGradient>
-                    <linearGradient id="glass" x1="0%" x2="100%" y1="0%" y2="0%">
-                      <stop offset="0%" stopColor="#0B7F86" stopOpacity="0.38" />
-                      <stop offset="100%" stopColor="#37F5E5" stopOpacity="0.18" />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    className="vehicle-shadow"
-                    d="M125 238 C178 275 583 275 636 238 L673 210 C686 200 681 180 665 176 L608 164 L554 103 C535 82 504 70 469 68 L295 68 C260 70 230 82 210 103 L156 164 L98 176 C83 180 78 200 91 210 Z"
-                  />
-                  <path
-                    className="vehicle-body"
-                    d="M112 225 C168 263 592 263 648 225 L681 201 C692 193 688 179 674 176 L604 161 L550 100 C532 82 504 72 468 70 L294 70 C258 72 230 82 212 100 L158 161 L88 176 C74 179 70 193 81 201 Z"
-                    fill="url(#bodyChrome)"
-                  />
-                  <path
-                    className="vehicle-glass"
-                    d="M245 111 L294 85 L461 85 L514 111 L481 155 L278 155 Z"
-                    fill="url(#glass)"
-                  />
-                  <path className="vehicle-line" d="M159 164 L604 164" />
-                  <path className="vehicle-line" d="M245 111 L202 170" />
-                  <path className="vehicle-line" d="M514 111 L558 170" />
-                  <rect className="component-zone" x="315" y="178" width="136" height="48" rx="8" />
-                  <rect className="component-zone" x="150" y="172" width="94" height="42" rx="8" />
-                  <rect className="component-zone" x="546" y="140" width="72" height="40" rx="8" />
-                  <circle className="wheel" cx="188" cy="228" r="38" />
-                  <circle className="wheel" cx="574" cy="228" r="38" />
-                </svg>
+            <div className="directory-layout">
+              <div className="directory-browser">
+                <div className="directory-toolbar">
+                  <label className="directory-search">
+                    <span className="meta-label">Search tree</span>
+                    <input
+                      value={directoryQuery}
+                      onChange={(event) => setDirectoryQuery(event.target.value)}
+                      placeholder="Engine, gearbox, ADAS, serial, recall..."
+                    />
+                  </label>
+                  <div className="directory-counts">
+                    <strong>{visibleRows.length}</strong>
+                    <span>of {allRows.length} nodes</span>
+                  </div>
+                </div>
 
-                {twinComponents.map((component) => (
-                  <button
-                    key={component.id}
-                    type="button"
-                    className={`hotspot ${component.tone} ${component.id === selectedComponent.id ? "active" : ""}`}
-                    style={{ left: `${component.x}%`, top: `${component.y}%` }}
-                    onClick={() => setSelectedComponentId(component.id)}
-                    aria-label={`${component.label}: ${component.serial}`}
-                  >
-                    <span />
-                  </button>
-                ))}
+                <div className="tree-list" aria-label={`${selectedVehicle.vin} assembly directory`}>
+                  {visibleRows.map((row) => (
+                    <button
+                      type="button"
+                      key={row.id}
+                      className={`tree-row ${row.id === selectedNode.id ? "selected" : ""}`}
+                      style={{ paddingLeft: `${12 + row.depth * 18}px` }}
+                      onClick={() => setSelectedNodeId(row.id)}
+                    >
+                      <span className={`tree-marker ${row.childCount > 0 ? "branch" : "leaf"}`} aria-hidden="true">
+                        {row.childCount > 0 ? ">" : "-"}
+                      </span>
+                      <div className="tree-node-copy">
+                        <strong>{row.label}</strong>
+                        <span>{row.nodeType} / {row.category}</span>
+                      </div>
+                      <span className="tree-serial">{displayValue(row.serial || row.partNumber)}</span>
+                      <StatusChip label={row.status} tone={row.tone} />
+                    </button>
+                  ))}
+                  {visibleRows.length === 0 && <p className="empty-state">No matching assembly nodes.</p>}
+                </div>
               </div>
 
               <div className="component-inspector">
                 <div>
-                  <p className="meta-label">Selected Assembly</p>
+                  <p className="meta-label">Selected Vehicle</p>
                   <strong className="inspector-title">{selectedVehicle.model}</strong>
                   <span className="inspector-muted">{selectedVehicle.vin}</span>
                   <span className="inspector-muted">{selectedVehicle.warranty}</span>
                 </div>
 
+                <div className="directory-summary">
+                  <div>
+                    <span>Nodes</span>
+                    <strong>{allRows.length}</strong>
+                  </div>
+                  <div>
+                    <span>Leaf parts</span>
+                    <strong>{leafCount}</strong>
+                  </div>
+                  <div>
+                    <span>Depth</span>
+                    <strong>{Math.max(...allRows.map((row) => row.depth)) + 1}</strong>
+                  </div>
+                </div>
+
                 <div className="component-card">
                   <div className="component-card-head">
                     <div>
-                      <p className="meta-label">Authenticated Item</p>
-                      <strong>{selectedComponent.label}</strong>
+                      <p className="meta-label">Selected Node</p>
+                      <strong>{selectedNode.label}</strong>
                     </div>
-                    <StatusChip label={selectedComponent.status} tone={selectedComponent.tone} />
+                    <StatusChip label={selectedNode.status} tone={selectedNode.tone} />
                   </div>
                   <dl className="component-meta">
                     <div>
+                      <dt>Directory path</dt>
+                      <dd>{selectedNode.path}</dd>
+                    </div>
+                    <div>
+                      <dt>Node type</dt>
+                      <dd>{selectedNode.nodeType}</dd>
+                    </div>
+                    <div>
+                      <dt>Category</dt>
+                      <dd>{selectedNode.category}</dd>
+                    </div>
+                    <div>
+                      <dt>Quantity</dt>
+                      <dd>{selectedNode.quantity}</dd>
+                    </div>
+                    <div>
                       <dt>Serial number</dt>
-                      <dd>{selectedComponent.serial}</dd>
+                      <dd>{displayValue(selectedNode.serial)}</dd>
                     </div>
                     <div>
                       <dt>Part number</dt>
-                      <dd>{selectedComponent.partNumber}</dd>
+                      <dd>{displayValue(selectedNode.partNumber)}</dd>
                     </div>
                     <div>
                       <dt>OEM standard</dt>
-                      <dd>{selectedComponent.standard}</dd>
-                    </div>
-                    <div>
-                      <dt>Role</dt>
-                      <dd>{selectedComponent.role}</dd>
-                    </div>
-                    <div>
-                      <dt>Fitment event</dt>
-                      <dd>{selectedComponent.fitment}</dd>
+                      <dd>{selectedNode.standard}</dd>
                     </div>
                     <div>
                       <dt>Fitted by</dt>
-                      <dd>{selectedComponent.fittedBy}</dd>
+                      <dd>{selectedNode.fittedBy}</dd>
                     </div>
                     <div>
                       <dt>Repairer tier</dt>
-                      <dd>{selectedComponent.repairerTier}</dd>
+                      <dd>{selectedNode.repairerTier}</dd>
                     </div>
                     <div>
                       <dt>Network status</dt>
-                      <dd>{selectedComponent.networkStatus}</dd>
+                      <dd>{selectedNode.networkStatus}</dd>
                     </div>
                     <div>
                       <dt>Authenticated by</dt>
-                      <dd>{selectedComponent.authenticatedBy}</dd>
+                      <dd>{selectedNode.authenticatedBy}</dd>
                     </div>
                     <div>
                       <dt>User role</dt>
-                      <dd>{selectedComponent.authenticatorRole}</dd>
+                      <dd>{selectedNode.authenticatorRole}</dd>
                     </div>
                     <div>
                       <dt>Warranty impact</dt>
-                      <dd>{selectedComponent.warrantyImpact}</dd>
+                      <dd>{selectedNode.warrantyImpact}</dd>
                     </div>
                     <div>
                       <dt>Recall exposure</dt>
-                      <dd>{selectedComponent.recallExposure}</dd>
-                    </div>
-                    <div>
-                      <dt>Assembly ref</dt>
-                      <dd>{selectedVehicle.assemblyRef}</dd>
+                      <dd>{selectedNode.recallExposure}</dd>
                     </div>
                     <div>
                       <dt>Snapshot ref</dt>
-                      <dd>{selectedComponent.anchorRef}</dd>
+                      <dd>{selectedNode.anchorRef}</dd>
                     </div>
                   </dl>
                 </div>
+                {treeError && <p className="error">Backend directory unavailable: {treeError}</p>}
               </div>
             </div>
           </article>
@@ -613,7 +995,7 @@ export default function App() {
                   </div>
                   <div>
                     <span className="muted">{record.repairer}</span>
-                    <span className="muted">{record.repairerTier} · {record.warranty} · {record.lastCheck}</span>
+                    <span className="muted">{record.repairerTier} / {record.warranty} / {record.lastCheck}</span>
                   </div>
                   <StatusChip label={record.status} tone={record.tone} />
                 </button>
@@ -635,13 +1017,12 @@ export default function App() {
               <span />
             </div>
             <div className="verification-score">
-              <span>Integrity score</span>
+              <span>Tree integrity score</span>
               <strong>98.7%</strong>
             </div>
             <p className="panel-copy">
-              VINtegrity gives OEM teams the evidence trail to understand whether a warranty-period component was
-              authenticated by the OEM, an approved repairer, a certified lower-tier repairer, or someone outside the
-              repairer network.
+              VINtegrity evaluates fitment evidence at the vehicle, system, assembly, sub-assembly, component, and part
+              level.
             </p>
           </article>
 
@@ -686,8 +1067,8 @@ export default function App() {
               </div>
             </div>
             <p className="panel-copy">
-              {recallExposure.title} targets {recallExposure.target}. VINtegrity can focus the campaign on vehicles
-              whose current assembly evidence shows the affected component is actually attached.
+              {recallExposure.title} targets {recallExposure.target}. VINtegrity focuses the campaign on vehicles whose
+              current assembly tree shows the affected component is attached.
             </p>
           </article>
 

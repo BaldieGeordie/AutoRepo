@@ -17,6 +17,7 @@ async function purge() {
     ["Inspection", () => prisma.inspection.deleteMany()],
     ["AuthenticationEvent", () => prisma.authenticationEvent.deleteMany()],
     ["AssemblySnapshot", () => prisma.assemblySnapshot.deleteMany()],
+    ["AssemblyNode", () => prisma.assemblyNode.deleteMany()],
     ["AssemblyMembership", () => prisma.assemblyMembership.deleteMany()],
     ["Component", () => prisma.component.deleteMany()],
     ["Assembly", () => prisma.assembly.deleteMany()],
