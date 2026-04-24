@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 
 type MetaResponse = {
+  company: {
+    name: string;
+    parentCompany: string;
+    description: string;
+  };
   product: {
     name: string;
     tagline: string;
@@ -340,9 +345,12 @@ function Wordmark() {
         <span className="scan-line scan-line-two" />
         <span className="plate-line" />
       </div>
-      <div className="wordmark">
-        <span className="wordmark-vin">VIN</span>
-        <span className="wordmark-rest">tegrity</span>
+      <div className="brand-copy">
+        <div className="wordmark">
+          <span className="wordmark-vin">VIN</span>
+          <span className="wordmark-rest">tegrity</span>
+        </div>
+        <span className="company-line">AuthLine Auto</span>
       </div>
     </div>
   );
@@ -386,8 +394,9 @@ export default function App() {
           ))}
         </nav>
         <div className="system-card">
-          <p className="meta-label">Repairer network</p>
+          <p className="meta-label">{meta?.company.name || "AuthLine Auto"}</p>
           <strong>OEM warranty evidence</strong>
+          <span>{meta?.company.parentCompany || "AuthLine"} automotive industry arm</span>
           <span>{meta?.status || "Bootstrapping"} aggregation and authentication stack</span>
         </div>
       </aside>
@@ -395,11 +404,12 @@ export default function App() {
       <main className="dashboard">
         <header className="topbar">
           <div>
-            <p className="meta-label">OEM warranty intelligence</p>
+            <p className="meta-label">AuthLine Auto · OEM warranty intelligence</p>
             <h1>Repair Network Evidence Dashboard</h1>
             <p className="subtitle">
-              Track vehicle assemblies, component authentication, repairer network tier, and evidence that shows
-              whether warranty-period parts were fitted inside or outside the OEM repairer network.
+              AuthLine Auto gives manufacturers a control surface to track vehicle assemblies, component
+              authentication, repairer network tier, and evidence that shows whether warranty-period parts were fitted
+              inside or outside the OEM repairer network.
             </p>
           </div>
           <div className="header-actions" aria-label="Verification summary">
@@ -416,7 +426,10 @@ export default function App() {
         <section className="brand-strip" aria-label="Product positioning">
           <div>
             <p className="meta-label">Positioning</p>
-            <strong>Aggregation evidence for OEM warranty decisions and repairer-network transparency.</strong>
+            <strong>
+              VINtegrity by AuthLine Auto: aggregation evidence for OEM warranty decisions, targeted recalls, and
+              repairer-network transparency.
+            </strong>
           </div>
           <div className="vin-plate" aria-label="VIN sample">
             VIN 9C4A-7F21-VERIFIED

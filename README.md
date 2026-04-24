@@ -1,6 +1,8 @@
 # VINtegrity
 
-VINtegrity is a standalone OEM warranty intelligence platform for authenticated vehicle assemblies.
+VINtegrity is AuthLine Auto's standalone OEM warranty intelligence platform for authenticated vehicle assemblies.
+
+AuthLine Auto is the automotive industry arm of AuthLine, the parent company.
 
 The repository/workspace name is AutoRepo. The product exists as its own codebase, deployment stack, and operating model.
 
@@ -47,7 +49,7 @@ The scaffold now includes:
 
 - a minimal Fastify backend
 - a minimal React frontend
-- an AutoRepo-focused Prisma schema
+- a VINtegrity-focused Prisma schema
 - root Railway and Docker deployment scaffolding
 - a placeholder anchor worker entrypoint
 

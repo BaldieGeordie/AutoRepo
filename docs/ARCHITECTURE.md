@@ -4,6 +4,8 @@
 
 VINtegrity is an OEM warranty intelligence platform for authenticated vehicle assemblies.
 
+The platform is operated by AuthLine Auto, the automotive industry arm of parent company AuthLine.
+
 The main asset is the vehicle aggregation itself. Value comes from trusted knowledge of:
 
 - what a vehicle or sub-assembly should contain

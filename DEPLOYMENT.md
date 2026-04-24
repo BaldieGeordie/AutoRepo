@@ -1,6 +1,6 @@
 # Deployment Source Of Truth
 
-VINtegrity is intended to deploy from the repository root using:
+VINtegrity, operated by AuthLine Auto, is intended to deploy from the repository root using:
 
 - `railway.toml`
 - `Dockerfile`
@@ -36,7 +36,7 @@ The starter build can run before the first Prisma migration exists. Once migrati
 
 ## Environment Separation
 
-When we deploy beyond local development, VINtegrity should have its own:
+When we deploy beyond local development, AuthLine Auto's VINtegrity platform should have its own:
 
 - Railway project(s)
 - Postgres database(s)

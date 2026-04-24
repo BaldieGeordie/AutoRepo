@@ -156,13 +156,20 @@ async function main() {
   app.get("/health", async () => ({
     status: "ok",
     app: "VINtegrity",
+    company: "AuthLine Auto",
+    parentCompany: "AuthLine",
     startedAt,
   }));
 
   app.get("/api/v1/meta", async () => ({
+    company: {
+      name: "AuthLine Auto",
+      parentCompany: "AuthLine",
+      description: "The automotive industry arm of AuthLine.",
+    },
     product: {
       name: "VINtegrity",
-      tagline: "OEM warranty intelligence for authenticated vehicle assemblies.",
+      tagline: "OEM warranty intelligence for authenticated vehicle assemblies by AuthLine Auto.",
     },
     status: "starter",
     capabilities: [
