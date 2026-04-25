@@ -1118,12 +1118,13 @@ export default function App() {
   );
   const [directoryQuery, setDirectoryQuery] = useState("");
   const [activeWorkflowId, setActiveWorkflowId] = useState(repairWorkflowScenarios[0].id);
-  const [removedPartScan, setRemovedPartScan] = useState(repairWorkflowScenarios[0].scannedSerial);
-  const [fittedPartScan, setFittedPartScan] = useState(repairWorkflowScenarios[0].finalFitmentSerial);
-  const [capturedEvidence, setCapturedEvidence] = useState<EvidenceAttachment[]>(
-    repairWorkflowScenarios[0].evidenceAttachments,
-  );
+  const [removedPartScan, setRemovedPartScan] = useState("");
+  const [fittedPartScan, setFittedPartScan] = useState("");
+  const [capturedEvidence, setCapturedEvidence] = useState<EvidenceAttachment[]>([]);
   const [commitStatus, setCommitStatus] = useState("Evidence capture ready");
+  const [removedScanStatus, setRemovedScanStatus] = useState("Ready to scan the removed component.");
+  const [photoCaptureStatus, setPhotoCaptureStatus] = useState("Open the camera and capture one evidence image at a time.");
+  const [fittedScanStatus, setFittedScanStatus] = useState("Ready to scan the component being fitted.");
   const [activeTechnicianStage, setActiveTechnicianStage] = useState<TechnicianStageId>("scan");
 
   const selectedVehicle = vehicleRecords[0];
@@ -1224,21 +1225,25 @@ export default function App() {
   function selectWorkflow(workflow: WarrantyWorkflow) {
     setActiveWorkflowId(workflow.id);
     revealNode(workflow.assemblyNodeId);
-    setRemovedPartScan(workflow.scannedSerial);
-    setFittedPartScan(workflow.finalFitmentSerial);
-    setCapturedEvidence(workflow.evidenceAttachments || []);
+    setRemovedPartScan("");
+    setFittedPartScan("");
+    setCapturedEvidence([]);
     setCommitStatus("Evidence capture ready");
+    setRemovedScanStatus("Ready to scan the removed component.");
+    setPhotoCaptureStatus("Open the camera and capture one evidence image at a time.");
+    setFittedScanStatus("Ready to scan the component being fitted.");
   }
 
   function handleEvidenceFiles(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files || []);
     if (!files.length) {
+      setPhotoCaptureStatus("Camera closed without adding an image.");
       return;
     }
 
     const nextAttachments = files.map((file, index) => ({
       id: `local-${file.name}-${file.lastModified}-${index}`,
-      evidenceType: "Uploaded image",
+      evidenceType: "Camera image",
       label: file.name.replace(/\.[^.]+$/, ""),
       fileName: file.name,
       capturedAt: "Just now",
@@ -1248,7 +1253,33 @@ export default function App() {
     }));
 
     setCapturedEvidence((current) => [...current, ...nextAttachments]);
+    setPhotoCaptureStatus(
+      `${files.length} image${files.length === 1 ? "" : "s"} captured from camera. Repeat capture for extra angles.`,
+    );
     event.currentTarget.value = "";
+  }
+
+  function captureTime() {
+    return new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function scanRemovedPart() {
+    const serial = activeWorkflow.scannedSerial;
+    const baselineMatch = serial.trim().toUpperCase() === activeWorkflow.expectedSerial.trim().toUpperCase();
+    setRemovedPartScan(serial);
+    setRemovedScanStatus(
+      baselineMatch
+        ? `Captured ${serial} at ${captureTime()}. Matches the VIN baseline.`
+        : `Captured ${serial} at ${captureTime()}. Does not match the VIN baseline; retain evidence for warranty review.`,
+    );
+    setCommitStatus("Removed component captured. Capture photo evidence, then choose whether to refit or replace.");
+  }
+
+  function scanFittedPart() {
+    const serial = activeWorkflow.finalFitmentSerial;
+    setFittedPartScan(serial);
+    setFittedScanStatus(`Captured ${serial} at ${captureTime()}. Ready to book on against this VIN.`);
+    setCommitStatus("Fitted component captured. Commit the lifecycle record when the evidence set is complete.");
   }
 
   function commitLifecycleRecord() {
@@ -1299,9 +1330,9 @@ export default function App() {
         setWorkflowScenarios(payload.workflows);
         const nextActiveWorkflow = payload.workflows.find((workflow) => workflow.id === activeWorkflowId) || payload.workflows[0];
         if (nextActiveWorkflow) {
-          setRemovedPartScan(nextActiveWorkflow.scannedSerial);
-          setFittedPartScan(nextActiveWorkflow.finalFitmentSerial);
-          setCapturedEvidence(nextActiveWorkflow.evidenceAttachments || []);
+          setRemovedPartScan("");
+          setFittedPartScan("");
+          setCapturedEvidence([]);
         }
       })
       .catch((err: Error) => setWorkflowError(err.message));
@@ -1635,12 +1666,20 @@ export default function App() {
                       <span>Removed part serial</span>
                       <input
                         value={removedPartScan}
-                        onChange={(event) => setRemovedPartScan(event.target.value)}
+                        onChange={(event) => {
+                          const nextSerial = event.target.value;
+                          setRemovedPartScan(nextSerial);
+                          setRemovedScanStatus(
+                            nextSerial.trim()
+                              ? `Manual serial entry captured for ${nextSerial.trim()}.`
+                              : "Ready to scan the removed component.",
+                          );
+                        }}
                         placeholder="Scan or type removed serial"
                       />
                     </label>
                     <div className="capture-actions">
-                      <button type="button" className="large-action" onClick={() => setRemovedPartScan(activeWorkflow.scannedSerial)}>
+                      <button type="button" className="large-action" onClick={scanRemovedPart}>
                         Scan removed part
                       </button>
                       <StatusChip
@@ -1648,6 +1687,7 @@ export default function App() {
                         tone={removedBaselineMatch ? "green" : activeWorkflow.tone}
                       />
                     </div>
+                    <p className={`capture-status ${scanCaptured ? "ready" : ""}`}>{removedScanStatus}</p>
                     <div className="focus-summary">
                       <p className="meta-label">Expected from VIN baseline</p>
                       <strong>{activeWorkflow.expectedSerial}</strong>
@@ -1659,25 +1699,35 @@ export default function App() {
                 {activeTechnicianStage === "photos" && (
                   <div className="photo-stage-layout">
                     <label className="upload-target primary-upload-target">
-                      <input type="file" accept="image/*" multiple onChange={handleEvidenceFiles} />
-                      <span>Attach photos of the removed part, serial label, damage, or fitted part</span>
+                      <input type="file" accept="image/*" capture="environment" onChange={handleEvidenceFiles} />
+                      <span>Open camera</span>
+                      <small>Capture removed part, serial label, damage, and fitted state. Repeat for extra images.</small>
                     </label>
+                    <p className={`capture-status ${capturedEvidence.length > 0 ? "ready" : ""}`}>
+                      {photoCaptureStatus}
+                    </p>
                     <div className="attachment-grid tablet-attachment-grid">
-                      {capturedEvidence.map((attachment) => (
-                        <article className="attachment-card" key={attachment.id}>
-                          {attachment.previewUrl ? (
-                            <img src={attachment.previewUrl} alt={attachment.label} />
-                          ) : (
-                            <div className="attachment-preview" aria-hidden="true">IMG</div>
-                          )}
-                          <div>
-                            <strong>{attachment.label}</strong>
-                            <span>{attachment.fileName}</span>
-                            <em>{attachment.evidenceType} / {attachment.capturedAt}</em>
-                          </div>
-                          <StatusChip label={attachment.status} tone={attachment.tone} />
-                        </article>
-                      ))}
+                      {capturedEvidence.length === 0 ? (
+                        <div className="attachment-empty">
+                          No image evidence captured yet.
+                        </div>
+                      ) : (
+                        capturedEvidence.map((attachment) => (
+                          <article className="attachment-card" key={attachment.id}>
+                            {attachment.previewUrl ? (
+                              <img src={attachment.previewUrl} alt={attachment.label} />
+                            ) : (
+                              <div className="attachment-preview" aria-hidden="true">IMG</div>
+                            )}
+                            <div>
+                              <strong>{attachment.label}</strong>
+                              <span>{attachment.fileName}</span>
+                              <em>{attachment.evidenceType} / {attachment.capturedAt}</em>
+                            </div>
+                            <StatusChip label={attachment.status} tone={attachment.tone} />
+                          </article>
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
@@ -1711,7 +1761,15 @@ export default function App() {
                       <span>Fitted serial</span>
                       <input
                         value={fittedPartScan}
-                        onChange={(event) => setFittedPartScan(event.target.value)}
+                        onChange={(event) => {
+                          const nextSerial = event.target.value;
+                          setFittedPartScan(nextSerial);
+                          setFittedScanStatus(
+                            nextSerial.trim()
+                              ? `Manual fitted serial entry captured for ${nextSerial.trim()}.`
+                              : "Ready to scan the component being fitted.",
+                          );
+                        }}
                         placeholder="Scan or type fitted serial"
                       />
                     </label>
@@ -1729,13 +1787,14 @@ export default function App() {
                       </div>
                     </div>
                     <div className="capture-actions">
-                      <button type="button" onClick={() => setFittedPartScan(activeWorkflow.finalFitmentSerial)}>
+                      <button type="button" onClick={scanFittedPart}>
                         Scan fitted serial
                       </button>
                       <button type="button" className="commit-button large-action" onClick={commitLifecycleRecord}>
                         Commit lifecycle record
                       </button>
                     </div>
+                    <p className={`capture-status ${fittedSerialCaptured ? "ready" : ""}`}>{fittedScanStatus}</p>
                     <p className={`commit-status ${evidenceReady ? "ready" : ""}`}>{commitStatus}</p>
                   </div>
                 )}

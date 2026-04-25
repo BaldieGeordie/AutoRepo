@@ -1604,12 +1604,43 @@ button {
   line-height: 1.4;
 }
 
+.upload-target small {
+  display: block;
+  max-width: 420px;
+  margin-top: 6px;
+  color: var(--slate-grey);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.capture-status {
+  margin: 8px 0 0;
+  color: var(--cool-grey);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.capture-status.ready {
+  color: #a7f3d0;
+}
+
 .attachment-grid {
   display: grid;
   gap: 8px;
   margin-top: 10px;
   max-height: 238px;
   overflow: auto;
+}
+
+.attachment-empty {
+  display: grid;
+  min-height: 72px;
+  place-items: center;
+  border: 1px dashed rgba(42, 52, 70, 0.9);
+  border-radius: 8px;
+  color: var(--slate-grey);
+  background: rgba(7, 10, 15, 0.28);
+  font-size: 0.82rem;
 }
 
 .attachment-card {
