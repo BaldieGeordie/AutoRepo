@@ -18,6 +18,7 @@ The platform is built around these core principles:
 - preserve care-history evidence for later warranty review and buyer confidence
 - detect parts fitted outside the OEM repairer network
 - support technician repair workflows for scanning removed parts, booking parts off, and booking replacements on
+- attach image evidence of removed parts, labels, damage, and fitted components to the lifecycle record
 - support re-fitting the same authenticated original part when no replacement is needed
 - capture non-genuine parts and OEM parts that are not logged to the current VIN
 - allow a mismatched scanned part to be returned to the vehicle while logging non-network fitment evidence
@@ -48,6 +49,7 @@ The core objects for VINtegrity are:
 - `RepairEvent`: the service or warranty job where parts are verified, booked off, and booked back on
 - `RepairEventItem`: the serial-level evidence for each booked-off or booked-on component
 - `RepairScanEvidence`: the scan result for a removed part, including expected serial, observed serial, authenticity, VIN-baseline status, re-fit/return/replacement decision, OEM recognition, shipment trace, network fitment evidence, and warranty impact
+- `RepairEvidenceAttachment`: image or document evidence attached to a repair event, scan result, or book-off/book-on item
 - `SafetyCampaign`: a recall or service campaign targeted by affected component serials
 - `AssemblyCampaignExposure`: the vehicle-level exposure when an affected component is attached to a vehicle
 
@@ -80,10 +82,11 @@ The GitHub repository is:
 7. Seal the initial-sale assembly snapshot.
 8. Book components off and back on during repair work.
 9. Scan removed parts and compare them to the sealed original VIN baseline.
-10. Decide whether the authenticated original is re-fitted or replaced.
-11. Capture non-genuine or not-logged-to-VIN parts.
-12. Allow a mismatched scanned part to be returned to the vehicle while preserving the warranty flag.
-13. Trace mismatched OEM parts to shipment destination and repairer network tier.
-14. Resolve recalls to vehicles carrying affected serialized parts.
-15. Inspect a vehicle later.
-16. Flag warranty-sensitive parts fitted outside the repairer network.
+10. Attach image evidence for the removed part, serial label, damage, and fitted item.
+11. Decide whether the authenticated original is re-fitted or replaced.
+12. Capture non-genuine or not-logged-to-VIN parts.
+13. Allow a mismatched scanned part to be returned to the vehicle while preserving the warranty flag.
+14. Trace mismatched OEM parts to shipment destination and repairer network tier.
+15. Resolve recalls to vehicles carrying affected serialized parts.
+16. Inspect a vehicle later.
+17. Flag warranty-sensitive parts fitted outside the repairer network.

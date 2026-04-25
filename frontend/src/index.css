@@ -1259,6 +1259,212 @@ button {
   box-shadow: inset 3px 0 0 var(--verified-cyan);
 }
 
+.repair-capture-board {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(360px, 1.2fr) minmax(260px, 0.9fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.capture-card {
+  min-width: 0;
+  border: 1px solid rgba(42, 52, 70, 0.78);
+  border-radius: 8px;
+  padding: 14px;
+  background:
+    linear-gradient(180deg, rgba(24, 33, 50, 0.7), rgba(7, 10, 15, 0.58)),
+    rgba(7, 10, 15, 0.42);
+}
+
+.evidence-capture-card {
+  background:
+    linear-gradient(180deg, rgba(11, 127, 134, 0.18), rgba(7, 10, 15, 0.56)),
+    rgba(7, 10, 15, 0.42);
+}
+
+.capture-card-header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.capture-card-header > span {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #031312;
+  background: var(--verified-cyan);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.capture-card-header .meta-label {
+  margin: 0;
+}
+
+.capture-card-header strong {
+  display: block;
+  color: var(--ice-white);
+  font-size: 0.98rem;
+}
+
+.scan-input {
+  display: grid;
+  gap: 7px;
+}
+
+.scan-input span {
+  color: var(--slate-grey);
+  font-size: 0.7rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.scan-input input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgba(42, 52, 70, 0.9);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: var(--ice-white);
+  background: rgba(7, 10, 15, 0.72);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  outline: none;
+}
+
+.scan-input input:focus {
+  border-color: rgba(25, 211, 197, 0.62);
+  box-shadow: 0 0 0 3px rgba(25, 211, 197, 0.1);
+}
+
+.capture-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.capture-actions button,
+.upload-target {
+  min-height: 36px;
+  border: 1px solid rgba(42, 52, 70, 0.9);
+  border-radius: 8px;
+  padding: 0 11px;
+  color: var(--chrome-silver);
+  background: rgba(7, 10, 15, 0.72);
+  cursor: pointer;
+}
+
+.capture-actions button:hover,
+.upload-target:hover {
+  border-color: rgba(25, 211, 197, 0.52);
+  color: var(--neon-aqua);
+}
+
+.capture-actions .commit-button {
+  border-color: rgba(25, 211, 197, 0.52);
+  color: #031312;
+  background: var(--verified-cyan);
+  font-weight: 850;
+}
+
+.upload-target {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 58px;
+  text-align: center;
+}
+
+.upload-target input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.upload-target span {
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.attachment-grid {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  max-height: 238px;
+  overflow: auto;
+}
+
+.attachment-card {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(42, 52, 70, 0.72);
+  border-radius: 8px;
+  padding: 8px;
+  background: rgba(7, 10, 15, 0.42);
+}
+
+.attachment-card img,
+.attachment-preview {
+  width: 58px;
+  height: 44px;
+  border-radius: 7px;
+  object-fit: cover;
+}
+
+.attachment-preview {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(25, 211, 197, 0.28);
+  color: var(--neon-aqua);
+  background: rgba(25, 211, 197, 0.08);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.attachment-card strong,
+.attachment-card span,
+.attachment-card em {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-card strong {
+  color: var(--ice-white);
+  font-size: 0.85rem;
+}
+
+.attachment-card span,
+.attachment-card em {
+  color: var(--slate-grey);
+  font-size: 0.72rem;
+  font-style: normal;
+}
+
+.commit-status {
+  margin: 12px 0 0;
+  color: var(--cool-grey);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.commit-status.ready {
+  color: #a7f3d0;
+}
+
 .workflow-stage-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1530,6 +1736,7 @@ button {
   }
 
   .vin-context-grid,
+  .repair-capture-board,
   .workflow-stage-grid,
   .workspace-grid {
     grid-template-columns: 1fr;
@@ -1581,6 +1788,7 @@ button {
   .scan-decision-grid,
   .workflow-evidence-grid,
   .fitment-flow,
+  .attachment-card,
   .directory-toolbar,
   .tree-row,
   .workflow-card {

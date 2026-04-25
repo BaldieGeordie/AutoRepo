@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 
 type MetaResponse = {
   company: {
@@ -72,6 +72,17 @@ type WorkflowStep = {
   tone: Tone;
 };
 
+type EvidenceAttachment = {
+  id: string;
+  evidenceType: string;
+  label: string;
+  fileName: string;
+  capturedAt: string;
+  status: string;
+  tone: Tone;
+  previewUrl?: string;
+};
+
 type WarrantyWorkflow = {
   id: string;
   title: string;
@@ -103,6 +114,7 @@ type WarrantyWorkflow = {
   recommendedAction: string;
   steps: WorkflowStep[];
   evidenceLog: string[];
+  evidenceAttachments: EvidenceAttachment[];
 };
 
 const apiBase = import.meta.env.VITE_API_BASE || "/api/v1";
@@ -675,12 +687,32 @@ const repairWorkflowScenarios: WarrantyWorkflow[] = [
         tone: "green",
       },
     ],
-    evidenceLog: [
-      "Original component confirmed against initial-sale snapshot.",
-      "Faulty component booked off the vehicle assembly.",
-      "Replacement component booked on with technician, repairer, and service order evidence.",
-    ],
-  },
+      evidenceLog: [
+        "Original component confirmed against initial-sale snapshot.",
+        "Faulty component booked off the vehicle assembly.",
+        "Replacement component booked on with technician, repairer, and service order evidence.",
+      ],
+      evidenceAttachments: [
+        {
+          id: "photo-removed-original",
+          evidenceType: "Removed part photo",
+          label: "Removed ADAS sensor label",
+          fileName: "SO-WTY-184201-044_removed_ADAS-99015-R.jpg",
+          capturedAt: "10:42",
+          status: "Attached",
+          tone: "green",
+        },
+        {
+          id: "photo-replacement-fitted",
+          evidenceType: "Fitted part photo",
+          label: "Replacement serial on vehicle",
+          fileName: "SO-WTY-184201-044_fitted_ADAS-99177-OEM.jpg",
+          capturedAt: "10:51",
+          status: "Ready to anchor",
+          tone: "cyan",
+        },
+      ],
+    },
   {
     id: "original-part-refit",
     title: "Original part re-fitted",
@@ -737,6 +769,17 @@ const repairWorkflowScenarios: WarrantyWorkflow[] = [
       "Original component confirmed against initial-sale snapshot.",
       "No replacement serial consumed for this service order.",
       "Original component re-fitted and retained as the current part on the VIN file.",
+    ],
+    evidenceAttachments: [
+      {
+        id: "photo-refit-original",
+        evidenceType: "Re-fit photo",
+        label: "Original sensor after inspection",
+        fileName: "SO-WTY-184201-044_refit_ADAS-99015-R.jpg",
+        capturedAt: "10:48",
+        status: "Attached",
+        tone: "green",
+      },
     ],
   },
   {
@@ -795,6 +838,26 @@ const repairWorkflowScenarios: WarrantyWorkflow[] = [
       "Mismatch recorded against sealed initial-sale snapshot.",
       "Scanned part recognised as an OEM serial.",
       "Shipment trace shows outside-network destination, creating potential warranty invalidation.",
+    ],
+    evidenceAttachments: [
+      {
+        id: "photo-mismatch-removed",
+        evidenceType: "Mismatch photo",
+        label: "Unexpected OEM serial",
+        fileName: "SO-WTY-184201-044_removed_ADAS-44200-X.jpg",
+        capturedAt: "10:45",
+        status: "Warranty review",
+        tone: "amber",
+      },
+      {
+        id: "photo-mismatch-replacement",
+        evidenceType: "Fitted part photo",
+        label: "Authenticated replacement",
+        fileName: "SO-WTY-184201-044_fitted_ADAS-99177-OEM.jpg",
+        capturedAt: "10:58",
+        status: "Attached",
+        tone: "green",
+      },
     ],
   },
   {
@@ -860,6 +923,17 @@ const repairWorkflowScenarios: WarrantyWorkflow[] = [
       "Scanned part does not match the sealed initial-sale snapshot.",
       "No OEM serial or approved shipment trace found for the scanned item.",
       "Technician returned the scanned part to the vehicle and the fitment is logged as outside the network supply chain.",
+    ],
+    evidenceAttachments: [
+      {
+        id: "photo-unknown-returned",
+        evidenceType: "Non-genuine evidence",
+        label: "Returned unlogged sensor",
+        fileName: "SO-WTY-184201-044_returned_ADAS-AFT-8831.jpg",
+        capturedAt: "11:06",
+        status: "Warranty flag",
+        tone: "red",
+      },
     ],
   },
 ];
@@ -1042,6 +1116,12 @@ export default function App() {
   );
   const [directoryQuery, setDirectoryQuery] = useState("");
   const [activeWorkflowId, setActiveWorkflowId] = useState(repairWorkflowScenarios[0].id);
+  const [removedPartScan, setRemovedPartScan] = useState(repairWorkflowScenarios[0].scannedSerial);
+  const [fittedPartScan, setFittedPartScan] = useState(repairWorkflowScenarios[0].finalFitmentSerial);
+  const [capturedEvidence, setCapturedEvidence] = useState<EvidenceAttachment[]>(
+    repairWorkflowScenarios[0].evidenceAttachments,
+  );
+  const [commitStatus, setCommitStatus] = useState("Evidence capture ready");
 
   const selectedVehicle = vehicleRecords[0];
   const allRows = useMemo(() => flattenTree(aggregationRoot, 0, [], new Set<string>(), true), [aggregationRoot]);
@@ -1055,6 +1135,11 @@ export default function App() {
   const leafCount = useMemo(() => countLeafNodes(aggregationRoot), [aggregationRoot]);
   const activeWorkflow =
     workflowScenarios.find((workflow) => workflow.id === activeWorkflowId) || workflowScenarios[0];
+  const scanCaptured = removedPartScan.trim().length > 0;
+  const fittedSerialCaptured = fittedPartScan.trim().length > 0;
+  const removedBaselineMatch =
+    removedPartScan.trim().toUpperCase() === activeWorkflow.expectedSerial.trim().toUpperCase();
+  const evidenceReady = scanCaptured && fittedSerialCaptured && capturedEvidence.length > 0;
   const workflowStages = [
     {
       label: "1. Select component",
@@ -1064,7 +1149,7 @@ export default function App() {
     },
     {
       label: "2. Scan removed part",
-      title: activeWorkflow.scannedSerial,
+      title: scanCaptured ? removedPartScan : "Awaiting scan",
       detail: activeWorkflow.scanDecision,
       tone: activeWorkflow.scanOutcome === "ORIGINAL_MATCH" ? "green" as Tone : activeWorkflow.tone,
     },
@@ -1076,15 +1161,15 @@ export default function App() {
     },
     {
       label: "4. Confirm fitted serial",
-      title: activeWorkflow.finalFitmentSerial,
+      title: fittedSerialCaptured ? fittedPartScan : "Awaiting fitted serial",
       detail: activeWorkflow.vehicleStateAfterWork,
       tone: activeWorkflow.tone,
     },
     {
       label: "5. Commit evidence",
-      title: warrantyLabel(activeWorkflow.warrantyImpact),
-      detail: activeWorkflow.networkFitmentEvidence,
-      tone: activeWorkflow.tone,
+      title: evidenceReady ? warrantyLabel(activeWorkflow.warrantyImpact) : "Evidence incomplete",
+      detail: `${capturedEvidence.length} image record${capturedEvidence.length === 1 ? "" : "s"} attached. ${activeWorkflow.networkFitmentEvidence}`,
+      tone: evidenceReady ? activeWorkflow.tone : "amber" as Tone,
     },
   ];
 
@@ -1103,6 +1188,44 @@ export default function App() {
   function revealNode(nodeId: string) {
     setSelectedNodeId(nodeId);
     setExpandedNodeIds((current) => new Set([...current, ...getExpandedIdsForNode(aggregationRoot, nodeId)]));
+  }
+
+  function selectWorkflow(workflow: WarrantyWorkflow) {
+    setActiveWorkflowId(workflow.id);
+    revealNode(workflow.assemblyNodeId);
+    setRemovedPartScan(workflow.scannedSerial);
+    setFittedPartScan(workflow.finalFitmentSerial);
+    setCapturedEvidence(workflow.evidenceAttachments || []);
+    setCommitStatus("Evidence capture ready");
+  }
+
+  function handleEvidenceFiles(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) {
+      return;
+    }
+
+    const nextAttachments = files.map((file, index) => ({
+      id: `local-${file.name}-${file.lastModified}-${index}`,
+      evidenceType: "Uploaded image",
+      label: file.name.replace(/\.[^.]+$/, ""),
+      fileName: file.name,
+      capturedAt: "Just now",
+      status: "Pending commit",
+      tone: "cyan" as Tone,
+      previewUrl: URL.createObjectURL(file),
+    }));
+
+    setCapturedEvidence((current) => [...current, ...nextAttachments]);
+    event.currentTarget.value = "";
+  }
+
+  function commitLifecycleRecord() {
+    setCommitStatus(
+      evidenceReady
+        ? `Lifecycle record ready: ${removedPartScan} off, ${fittedPartScan} on, ${capturedEvidence.length} image record${capturedEvidence.length === 1 ? "" : "s"} attached.`
+        : "Scan removed part, confirm fitted serial, and attach at least one image before commit.",
+    );
   }
 
   useEffect(() => {
@@ -1136,7 +1259,15 @@ export default function App() {
         }
         return response.json();
       })
-      .then((payload: { workflows: WarrantyWorkflow[] }) => setWorkflowScenarios(payload.workflows))
+      .then((payload: { workflows: WarrantyWorkflow[] }) => {
+        setWorkflowScenarios(payload.workflows);
+        const nextActiveWorkflow = payload.workflows.find((workflow) => workflow.id === activeWorkflowId) || payload.workflows[0];
+        if (nextActiveWorkflow) {
+          setRemovedPartScan(nextActiveWorkflow.scannedSerial);
+          setFittedPartScan(nextActiveWorkflow.finalFitmentSerial);
+          setCapturedEvidence(nextActiveWorkflow.evidenceAttachments || []);
+        }
+      })
       .catch((err: Error) => setWorkflowError(err.message));
   }, []);
 
@@ -1427,10 +1558,7 @@ export default function App() {
                     key={workflow.id}
                     className={`workflow-card ${workflow.id === activeWorkflow.id ? "selected" : ""}`}
                     aria-pressed={workflow.id === activeWorkflow.id}
-                    onClick={() => {
-                      setActiveWorkflowId(workflow.id);
-                      revealNode(workflow.assemblyNodeId);
-                    }}
+                    onClick={() => selectWorkflow(workflow)}
                   >
                     <span className={`event-dot ${workflow.tone}`} />
                     <div>
@@ -1442,6 +1570,93 @@ export default function App() {
                     </div>
                   </button>
                 ))}
+              </div>
+
+              <div className="repair-capture-board" aria-label="Technician capture controls">
+                <section className="capture-card">
+                  <div className="capture-card-header">
+                    <span>1</span>
+                    <div>
+                      <p className="meta-label">Removed part</p>
+                      <strong>Scan serial</strong>
+                    </div>
+                  </div>
+                  <label className="scan-input">
+                    <span>Observed serial</span>
+                    <input
+                      value={removedPartScan}
+                      onChange={(event) => setRemovedPartScan(event.target.value)}
+                      placeholder="Scan or type removed serial"
+                    />
+                  </label>
+                  <div className="capture-actions">
+                    <button type="button" onClick={() => setRemovedPartScan(activeWorkflow.scannedSerial)}>
+                      Scan removed
+                    </button>
+                    <StatusChip
+                      label={removedBaselineMatch ? "Baseline match" : "Review scan"}
+                      tone={removedBaselineMatch ? "green" : activeWorkflow.tone}
+                    />
+                  </div>
+                </section>
+
+                <section className="capture-card evidence-capture-card">
+                  <div className="capture-card-header">
+                    <span>2</span>
+                    <div>
+                      <p className="meta-label">Image evidence</p>
+                      <strong>Attach photos</strong>
+                    </div>
+                  </div>
+                  <label className="upload-target">
+                    <input type="file" accept="image/*" multiple onChange={handleEvidenceFiles} />
+                    <span>Attach removed part, label, damage, or fitted part images</span>
+                  </label>
+                  <div className="attachment-grid">
+                    {capturedEvidence.map((attachment) => (
+                      <article className="attachment-card" key={attachment.id}>
+                        {attachment.previewUrl ? (
+                          <img src={attachment.previewUrl} alt={attachment.label} />
+                        ) : (
+                          <div className="attachment-preview" aria-hidden="true">IMG</div>
+                        )}
+                        <div>
+                          <strong>{attachment.label}</strong>
+                          <span>{attachment.fileName}</span>
+                          <em>{attachment.evidenceType} / {attachment.capturedAt}</em>
+                        </div>
+                        <StatusChip label={attachment.status} tone={attachment.tone} />
+                      </article>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="capture-card">
+                  <div className="capture-card-header">
+                    <span>3</span>
+                    <div>
+                      <p className="meta-label">Final fitment</p>
+                      <strong>Book on and commit</strong>
+                    </div>
+                  </div>
+                  <label className="scan-input">
+                    <span>Fitted serial</span>
+                    <input
+                      value={fittedPartScan}
+                      onChange={(event) => setFittedPartScan(event.target.value)}
+                      placeholder="Scan or type fitted serial"
+                    />
+                  </label>
+                  <div className="capture-actions">
+                    <button type="button" onClick={() => setFittedPartScan(activeWorkflow.finalFitmentSerial)}>
+                      Scan fitted
+                    </button>
+                    <button type="button" className="commit-button" onClick={commitLifecycleRecord}>
+                      Commit record
+                    </button>
+                  </div>
+                  <p className={`commit-status ${evidenceReady ? "ready" : ""}`}>{commitStatus}</p>
+                </section>
               </div>
 
               <div className="workflow-stage-grid" aria-label="Replace component workflow steps">
@@ -1457,13 +1672,13 @@ export default function App() {
               <div className="fitment-flow" aria-label="Book off and book on sequence">
                 <div className="fitment-step">
                   <p className="meta-label">Book off current fitted item</p>
-                  <strong>{activeWorkflow.scannedSerial}</strong>
+                  <strong>{removedPartScan || "Awaiting scan"}</strong>
                   <span>Removed from {selectedNode.label}</span>
                 </div>
                 <div className="fitment-arrow" aria-hidden="true">-&gt;</div>
                 <div className="fitment-step emphasis">
                   <p className="meta-label">{activeWorkflow.finalFitmentLabel}</p>
-                  <strong>{activeWorkflow.finalFitmentSerial}</strong>
+                  <strong>{fittedPartScan || "Awaiting fitted serial"}</strong>
                   <span>{activeWorkflow.serviceRoute}</span>
                 </div>
                 <div className="fitment-arrow" aria-hidden="true">-&gt;</div>
@@ -1491,7 +1706,7 @@ export default function App() {
                   </div>
                   <div>
                     <span>Removed scan</span>
-                    <strong>{activeWorkflow.scannedSerial}</strong>
+                    <strong>{removedPartScan || "Awaiting scan"}</strong>
                   </div>
                   <div>
                     <span>Fitment route</span>
@@ -1499,7 +1714,7 @@ export default function App() {
                   </div>
                   <div>
                     <span>{activeWorkflow.finalFitmentLabel}</span>
-                    <strong>{activeWorkflow.finalFitmentSerial}</strong>
+                    <strong>{fittedPartScan || "Awaiting fitted serial"}</strong>
                   </div>
                 </div>
 
@@ -1550,7 +1765,7 @@ export default function App() {
               </div>
               <div>
                 <span>Scanned removed part</span>
-                <strong>{activeWorkflow.scannedSerial}</strong>
+                <strong>{removedPartScan || "Awaiting scan"}</strong>
               </div>
             </div>
             <dl className="scan-meta">

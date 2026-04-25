@@ -14,6 +14,7 @@ The main asset is the vehicle aggregation itself. Value comes from trusted knowl
 - whether the repairer was OEM, approved, tier 2/certified, or outside the network
 - which components were booked off and back on during warranty or repair work
 - whether a removed component scan matches the original part sealed into the VIN baseline
+- which images or documents support the removed-part scan and final fitment decision
 - whether the authenticated original part was re-fitted or replaced after inspection
 - whether the scanned part is non-genuine or not logged to the current VIN
 - whether a mismatched part was returned to the vehicle despite being outside the approved network
@@ -96,6 +97,10 @@ This is how the platform proves that manufacturers or approved repairers really 
 
 The technician's scan result for a removed part. It captures the expected original serial, the scanned serial, whether the scanned item is recognised as OEM, whether it is logged to the current VIN, whether it appears non-genuine, whether the technician re-fitted the original, returned the scanned mismatch, or fitted a replacement, where that part was shipped, the repairer network tier, and the warranty impact.
 
+### Repair Evidence Attachment
+
+Image or document evidence attached to the lifecycle record. Typical attachments are removed-part photos, serial-label closeups, damage images, fitted-replacement photos, or workshop documents. Attachments can link to the repair event, a scan result, or a specific book-off/book-on item so the audit trail can prove not only what serial was scanned, but what the technician physically saw.
+
 This supports two core warranty flows:
 
 - original part confirmed: scan matches the sealed VIN baseline, then the technician books the faulty part off and the replacement on
@@ -133,13 +138,14 @@ The first meaningful end-to-end demo should prove:
 7. the initial-sale snapshot is sealed and queued for evidence anchoring
 8. a warranty or repair event books parts off and back on the vehicle
 9. removed-part scan evidence is compared against the original VIN baseline
-10. a technician can either replace the part or re-fit the authenticated original
-11. non-genuine or not-logged-to-VIN parts are captured
-12. a technician can return a mismatched scanned part while preserving non-network fitment evidence
-13. mismatched OEM parts are traced to their shipment destination and repairer network tier
-14. a recall campaign is resolved to vehicles carrying affected components
-15. the assembly is inspected later
-16. the platform flags warranty-relevant variance:
+10. image evidence is attached to the removed part, serial label, damage, and final fitted state
+11. a technician can either replace the part or re-fit the authenticated original
+12. non-genuine or not-logged-to-VIN parts are captured
+13. a technician can return a mismatched scanned part while preserving non-network fitment evidence
+14. mismatched OEM parts are traced to their shipment destination and repairer network tier
+15. a recall campaign is resolved to vehicles carrying affected components
+16. the assembly is inspected later
+17. the platform flags warranty-relevant variance:
    - missing component
    - unexpected added component
    - substituted component

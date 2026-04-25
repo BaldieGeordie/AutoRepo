@@ -124,6 +124,15 @@ enum FitmentDecision {
   WARRANTY_REVIEW
 }
 
+enum RepairEvidenceAttachmentType {
+  REMOVED_PART_PHOTO
+  FITTED_PART_PHOTO
+  DAMAGE_PHOTO
+  LABEL_SCAN
+  WORKSHOP_DOCUMENT
+  OTHER
+}
+
 enum CampaignStatus {
   DRAFT
   ACTIVE
@@ -249,17 +258,18 @@ model Repairer {
 }
 
 model PlatformUser {
-  id                   String                @id @default(uuid())
+  id                   String                     @id @default(uuid())
   displayName          String
-  email                String?               @unique
+  email                String?                    @unique
   role                 String
   organisationName     String?
   repairerId           String?
-  createdAt            DateTime              @default(now())
-  repairer             Repairer?             @relation(fields: [repairerId], references: [id], onDelete: SetNull)
-  openedRepairEvents   RepairEvent[]         @relation("RepairEventOpenedBy")
-  repairItemAuths      RepairEventItem[]     @relation("RepairItemAuthenticatedBy")
+  createdAt            DateTime                   @default(now())
+  repairer             Repairer?                  @relation(fields: [repairerId], references: [id], onDelete: SetNull)
+  openedRepairEvents   RepairEvent[]              @relation("RepairEventOpenedBy")
+  repairItemAuths      RepairEventItem[]          @relation("RepairItemAuthenticatedBy")
   authenticationEvents AuthenticationEvent[]
+  uploadedAttachments  RepairEvidenceAttachment[]
 
   @@index([repairerId])
   @@index([role])
@@ -295,22 +305,23 @@ model AuthenticationEvent {
 }
 
 model RepairEvent {
-  id               String               @id @default(uuid())
+  id               String                     @id @default(uuid())
   assemblyUid      String
   repairerId       String?
   openedByUserId   String?
-  status           RepairEventStatus    @default(OPEN)
+  status           RepairEventStatus          @default(OPEN)
   reason           String
   warrantyClaimRef String?
   serviceOrderRef  String?
-  openedAt         DateTime             @default(now())
+  openedAt         DateTime                   @default(now())
   closedAt         DateTime?
   notes            String?
-  assembly         Assembly             @relation(fields: [assemblyUid], references: [assemblyUid], onDelete: Cascade)
-  repairer         Repairer?            @relation(fields: [repairerId], references: [id], onDelete: SetNull)
-  openedBy         PlatformUser?        @relation("RepairEventOpenedBy", fields: [openedByUserId], references: [id], onDelete: SetNull)
+  assembly         Assembly                   @relation(fields: [assemblyUid], references: [assemblyUid], onDelete: Cascade)
+  repairer         Repairer?                  @relation(fields: [repairerId], references: [id], onDelete: SetNull)
+  openedBy         PlatformUser?              @relation("RepairEventOpenedBy", fields: [openedByUserId], references: [id], onDelete: SetNull)
   items            RepairEventItem[]
   scanEvidence     RepairScanEvidence[]
+  attachments      RepairEvidenceAttachment[]
 
   @@index([assemblyUid, openedAt])
   @@index([repairerId])
@@ -321,7 +332,7 @@ model RepairEvent {
 }
 
 model RepairEventItem {
-  id                    String                @id @default(uuid())
+  id                    String                     @id @default(uuid())
   repairEventId         String
   action                RepairEventItemAction
   componentUid          String?
@@ -331,16 +342,17 @@ model RepairEventItem {
   expectedSerial        String?
   observedSerial        String?
   networkStatus         NetworkFitmentStatus
-  warrantyImpact        WarrantyImpact        @default(UNKNOWN)
+  warrantyImpact        WarrantyImpact             @default(UNKNOWN)
   authenticatedByUserId String?
   authenticatedAt       DateTime?
   notes                 String?
-  createdAt             DateTime              @default(now())
-  repairEvent           RepairEvent           @relation(fields: [repairEventId], references: [id], onDelete: Cascade)
-  component             Component?            @relation("RepairItemComponent", fields: [componentUid], references: [componentUid], onDelete: SetNull)
-  replacementFor        Component?            @relation("RepairItemReplacementFor", fields: [replacementForUid], references: [componentUid], onDelete: SetNull)
-  membership            AssemblyMembership?   @relation(fields: [membershipId], references: [id], onDelete: SetNull)
-  authenticatedBy       PlatformUser?         @relation("RepairItemAuthenticatedBy", fields: [authenticatedByUserId], references: [id], onDelete: SetNull)
+  createdAt             DateTime                   @default(now())
+  repairEvent           RepairEvent                @relation(fields: [repairEventId], references: [id], onDelete: Cascade)
+  component             Component?                 @relation("RepairItemComponent", fields: [componentUid], references: [componentUid], onDelete: SetNull)
+  replacementFor        Component?                 @relation("RepairItemReplacementFor", fields: [replacementForUid], references: [componentUid], onDelete: SetNull)
+  membership            AssemblyMembership?        @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  authenticatedBy       PlatformUser?              @relation("RepairItemAuthenticatedBy", fields: [authenticatedByUserId], references: [id], onDelete: SetNull)
+  attachments           RepairEvidenceAttachment[]
 
   @@index([repairEventId])
   @@index([action])
@@ -352,7 +364,7 @@ model RepairEventItem {
 }
 
 model RepairScanEvidence {
-  id                     String               @id @default(uuid())
+  id                     String                     @id @default(uuid())
   repairEventId          String
   assemblyNodeId         String?
   expectedSerial         String
@@ -360,20 +372,21 @@ model RepairScanEvidence {
   expectedPartNumber     String?
   scannedPartNumber      String?
   outcome                PartScanOutcome
-  authenticity           PartAuthenticity     @default(UNKNOWN)
-  loggedToVinBaseline    Boolean              @default(false)
-  fitmentDecision        FitmentDecision      @default(REPLACE_COMPONENT)
+  authenticity           PartAuthenticity           @default(UNKNOWN)
+  loggedToVinBaseline    Boolean                    @default(false)
+  fitmentDecision        FitmentDecision            @default(REPLACE_COMPONENT)
   finalFitmentSerial     String?
-  oemPartRecognised      Boolean              @default(false)
+  oemPartRecognised      Boolean                    @default(false)
   shippedToOrganisation  String?
   shippedToRepairerTier  RepairerTier?
   networkFitmentEvidence String?
   networkStatus          NetworkFitmentStatus
-  warrantyImpact         WarrantyImpact       @default(UNKNOWN)
-  scannedAt              DateTime             @default(now())
+  warrantyImpact         WarrantyImpact             @default(UNKNOWN)
+  scannedAt              DateTime                   @default(now())
   notes                  String?
-  repairEvent            RepairEvent          @relation(fields: [repairEventId], references: [id], onDelete: Cascade)
-  assemblyNode           AssemblyNode?        @relation(fields: [assemblyNodeId], references: [id], onDelete: SetNull)
+  repairEvent            RepairEvent                @relation(fields: [repairEventId], references: [id], onDelete: Cascade)
+  assemblyNode           AssemblyNode?              @relation(fields: [assemblyNodeId], references: [id], onDelete: SetNull)
+  attachments            RepairEvidenceAttachment[]
 
   @@index([repairEventId])
   @@index([assemblyNodeId])
@@ -384,6 +397,33 @@ model RepairScanEvidence {
   @@index([loggedToVinBaseline])
   @@index([fitmentDecision])
   @@index([networkStatus, warrantyImpact])
+}
+
+model RepairEvidenceAttachment {
+  id                String                       @id @default(uuid())
+  repairEventId     String
+  scanEvidenceId    String?
+  repairEventItemId String?
+  attachmentType    RepairEvidenceAttachmentType
+  fileName          String
+  mimeType          String?
+  storageKey        String?
+  sourceUrl         String?
+  evidenceHash      String?
+  caption           String?
+  capturedAt        DateTime                     @default(now())
+  uploadedByUserId  String?
+  repairEvent       RepairEvent                  @relation(fields: [repairEventId], references: [id], onDelete: Cascade)
+  scanEvidence      RepairScanEvidence?          @relation(fields: [scanEvidenceId], references: [id], onDelete: SetNull)
+  repairEventItem   RepairEventItem?             @relation(fields: [repairEventItemId], references: [id], onDelete: SetNull)
+  uploadedBy        PlatformUser?                @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([repairEventId])
+  @@index([scanEvidenceId])
+  @@index([repairEventItemId])
+  @@index([attachmentType])
+  @@index([uploadedByUserId])
+  @@index([capturedAt])
 }
 
 model SafetyCampaign {

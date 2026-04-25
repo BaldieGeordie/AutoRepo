@@ -11,6 +11,7 @@ async function purge() {
     ["AssemblyCampaignExposure", () => prisma.assemblyCampaignExposure.deleteMany()],
     ["CampaignComponentTarget", () => prisma.campaignComponentTarget.deleteMany()],
     ["SafetyCampaign", () => prisma.safetyCampaign.deleteMany()],
+    ["RepairEvidenceAttachment", () => prisma.repairEvidenceAttachment.deleteMany()],
     ["RepairScanEvidence", () => prisma.repairScanEvidence.deleteMany()],
     ["RepairEventItem", () => prisma.repairEventItem.deleteMany()],
     ["RepairEvent", () => prisma.repairEvent.deleteMany()],
