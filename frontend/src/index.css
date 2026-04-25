@@ -1259,6 +1259,215 @@ button {
   box-shadow: inset 3px 0 0 var(--verified-cyan);
 }
 
+.workflow-stage-rail {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stage-tab {
+  min-height: 68px;
+  border: 1px solid rgba(42, 52, 70, 0.86);
+  border-radius: 8px;
+  padding: 10px;
+  color: var(--cool-grey);
+  background: rgba(7, 10, 15, 0.42);
+  text-align: left;
+  cursor: pointer;
+}
+
+.stage-tab.active {
+  border-color: rgba(25, 211, 197, 0.58);
+  background: rgba(25, 211, 197, 0.1);
+  box-shadow: inset 0 -3px 0 var(--verified-cyan);
+}
+
+.stage-tab.complete:not(.active) {
+  border-color: rgba(34, 197, 94, 0.34);
+}
+
+.stage-tab span,
+.stage-tab strong {
+  display: block;
+}
+
+.stage-tab span {
+  color: var(--ice-white);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.stage-tab strong {
+  margin-top: 6px;
+  color: var(--slate-grey);
+  font-size: 0.68rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.stage-tab.complete strong {
+  color: #a7f3d0;
+}
+
+.active-stage-card {
+  border: 1px solid rgba(42, 52, 70, 0.86);
+  border-radius: 8px;
+  padding: 16px;
+  background:
+    linear-gradient(180deg, rgba(24, 33, 50, 0.78), rgba(7, 10, 15, 0.58)),
+    rgba(7, 10, 15, 0.42);
+}
+
+.active-stage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.active-stage-header h3 {
+  margin: 0;
+  color: var(--ice-white);
+  font-size: 1.32rem;
+  overflow-wrap: anywhere;
+}
+
+.active-stage-header span:not(.status-chip) {
+  display: block;
+  margin-top: 7px;
+  color: var(--cool-grey);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.stage-focus-grid,
+.single-task-grid,
+.photo-stage-layout,
+.commit-stage-layout {
+  display: grid;
+  gap: 12px;
+}
+
+.stage-focus-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr) auto;
+  align-items: stretch;
+}
+
+.focus-summary {
+  border: 1px solid rgba(42, 52, 70, 0.78);
+  border-radius: 8px;
+  padding: 13px;
+  background: rgba(7, 10, 15, 0.34);
+}
+
+.focus-summary .meta-label {
+  margin: 0 0 9px;
+}
+
+.focus-summary strong,
+.focus-summary span {
+  display: block;
+}
+
+.focus-summary strong {
+  color: var(--ice-white);
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.focus-summary span {
+  margin-top: 8px;
+  color: var(--cool-grey);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.stage-link-action {
+  min-height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(25, 211, 197, 0.48);
+  border-radius: 8px;
+  padding: 0 14px;
+  color: var(--neon-aqua);
+  background: rgba(25, 211, 197, 0.08);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.single-task-grid {
+  grid-template-columns: minmax(0, 1fr) auto minmax(260px, 0.72fr);
+  align-items: end;
+}
+
+.primary-scan-input input {
+  min-height: 58px;
+  font-size: 1.08rem;
+}
+
+.large-action {
+  min-height: 48px !important;
+  font-weight: 850;
+}
+
+.primary-upload-target {
+  min-height: 116px;
+  border-color: rgba(25, 211, 197, 0.52);
+  background: rgba(25, 211, 197, 0.08);
+}
+
+.tablet-attachment-grid {
+  max-height: 250px;
+}
+
+.route-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+}
+
+.commit-stage-layout .capture-actions {
+  margin-top: 0;
+}
+
+.compact-fitment-flow {
+  grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr);
+}
+
+.stage-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(42, 52, 70, 0.72);
+}
+
+.stage-footer button {
+  min-height: 40px;
+  min-width: 120px;
+  border: 1px solid rgba(42, 52, 70, 0.9);
+  border-radius: 8px;
+  padding: 0 14px;
+  color: var(--chrome-silver);
+  background: rgba(7, 10, 15, 0.72);
+  cursor: pointer;
+}
+
+.stage-footer button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.stage-footer .commit-button {
+  border-color: rgba(25, 211, 197, 0.52);
+  color: #031312;
+  background: var(--verified-cyan);
+  font-weight: 850;
+}
+
 .repair-capture-board {
   display: grid;
   grid-template-columns: minmax(260px, 0.9fr) minmax(360px, 1.2fr) minmax(260px, 0.9fr);
@@ -1737,6 +1946,7 @@ button {
 
   .vin-context-grid,
   .repair-capture-board,
+  .workflow-stage-rail,
   .workflow-stage-grid,
   .workspace-grid {
     grid-template-columns: 1fr;
@@ -1788,11 +1998,23 @@ button {
   .scan-decision-grid,
   .workflow-evidence-grid,
   .fitment-flow,
+  .compact-fitment-flow,
+  .single-task-grid,
+  .stage-focus-grid,
   .attachment-card,
   .directory-toolbar,
   .tree-row,
   .workflow-card {
     grid-template-columns: 1fr;
+  }
+
+  .active-stage-header,
+  .stage-footer {
+    flex-direction: column;
+  }
+
+  .stage-link-action {
+    min-height: 48px;
   }
 
   .fitment-arrow {

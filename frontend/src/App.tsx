@@ -83,6 +83,8 @@ type EvidenceAttachment = {
   previewUrl?: string;
 };
 
+type TechnicianStageId = "select" | "scan" | "photos" | "decision" | "commit";
+
 type WarrantyWorkflow = {
   id: string;
   title: string;
@@ -1122,6 +1124,7 @@ export default function App() {
     repairWorkflowScenarios[0].evidenceAttachments,
   );
   const [commitStatus, setCommitStatus] = useState("Evidence capture ready");
+  const [activeTechnicianStage, setActiveTechnicianStage] = useState<TechnicianStageId>("scan");
 
   const selectedVehicle = vehicleRecords[0];
   const allRows = useMemo(() => flattenTree(aggregationRoot, 0, [], new Set<string>(), true), [aggregationRoot]);
@@ -1140,38 +1143,66 @@ export default function App() {
   const removedBaselineMatch =
     removedPartScan.trim().toUpperCase() === activeWorkflow.expectedSerial.trim().toUpperCase();
   const evidenceReady = scanCaptured && fittedSerialCaptured && capturedEvidence.length > 0;
-  const workflowStages = [
+  const workflowStages: Array<{
+    id: TechnicianStageId;
+    label: string;
+    shortLabel: string;
+    title: string;
+    detail: string;
+    tone: Tone;
+    complete: boolean;
+  }> = [
     {
+      id: "select",
       label: "1. Select component",
+      shortLabel: "Select",
       title: selectedNode.label,
       detail: selectedNode.path,
       tone: selectedNode.tone,
+      complete: Boolean(selectedNode.id),
     },
     {
+      id: "scan",
       label: "2. Scan removed part",
+      shortLabel: "Scan",
       title: scanCaptured ? removedPartScan : "Awaiting scan",
       detail: activeWorkflow.scanDecision,
       tone: activeWorkflow.scanOutcome === "ORIGINAL_MATCH" ? "green" as Tone : activeWorkflow.tone,
+      complete: scanCaptured,
     },
     {
-      label: "3. Choose action",
+      id: "photos",
+      label: "3. Attach images",
+      shortLabel: "Photos",
+      title: `${capturedEvidence.length} image record${capturedEvidence.length === 1 ? "" : "s"}`,
+      detail: "Capture the removed part, serial label, damage, and final fitted state.",
+      tone: capturedEvidence.length > 0 ? "green" as Tone : "amber" as Tone,
+      complete: capturedEvidence.length > 0,
+    },
+    {
+      id: "decision",
+      label: "4. Choose action",
+      shortLabel: "Action",
       title: activeWorkflow.serviceRoute,
       detail: activeWorkflow.recommendedAction,
       tone: activeWorkflow.tone,
+      complete: Boolean(activeWorkflow.serviceRoute),
     },
     {
-      label: "4. Confirm fitted serial",
+      id: "commit",
+      label: "5. Book on and commit",
+      shortLabel: "Commit",
       title: fittedSerialCaptured ? fittedPartScan : "Awaiting fitted serial",
-      detail: activeWorkflow.vehicleStateAfterWork,
-      tone: activeWorkflow.tone,
-    },
-    {
-      label: "5. Commit evidence",
-      title: evidenceReady ? warrantyLabel(activeWorkflow.warrantyImpact) : "Evidence incomplete",
       detail: `${capturedEvidence.length} image record${capturedEvidence.length === 1 ? "" : "s"} attached. ${activeWorkflow.networkFitmentEvidence}`,
       tone: evidenceReady ? activeWorkflow.tone : "amber" as Tone,
+      complete: evidenceReady,
     },
   ];
+  const activeStageIndex = Math.max(
+    0,
+    workflowStages.findIndex((stage) => stage.id === activeTechnicianStage),
+  );
+  const activeStage = workflowStages[activeStageIndex] || workflowStages[0];
 
   function toggleNodeExpanded(nodeId: string) {
     setExpandedNodeIds((current) => {
@@ -1226,6 +1257,11 @@ export default function App() {
         ? `Lifecycle record ready: ${removedPartScan} off, ${fittedPartScan} on, ${capturedEvidence.length} image record${capturedEvidence.length === 1 ? "" : "s"} attached.`
         : "Scan removed part, confirm fitted serial, and attach at least one image before commit.",
     );
+  }
+
+  function moveTechnicianStage(direction: 1 | -1) {
+    const nextIndex = Math.min(Math.max(activeStageIndex + direction, 0), workflowStages.length - 1);
+    setActiveTechnicianStage(workflowStages[nextIndex].id);
   }
 
   useEffect(() => {
@@ -1551,193 +1587,171 @@ export default function App() {
               <StatusChip label={activeWorkflow.currentStatus} tone={activeWorkflow.tone} />
             </div>
             <div className="workflow-layout">
-              <div className="workflow-switcher" aria-label="Workflow route selector">
-                {workflowScenarios.map((workflow) => (
+              <div className="workflow-stage-rail" aria-label="Technician workflow stages">
+                {workflowStages.map((stage) => (
                   <button
                     type="button"
-                    key={workflow.id}
-                    className={`workflow-card ${workflow.id === activeWorkflow.id ? "selected" : ""}`}
-                    aria-pressed={workflow.id === activeWorkflow.id}
-                    onClick={() => selectWorkflow(workflow)}
+                    className={`stage-tab ${stage.id === activeStage.id ? "active" : ""} ${stage.complete ? "complete" : ""}`}
+                    key={stage.id}
+                    onClick={() => setActiveTechnicianStage(stage.id)}
                   >
-                    <span className={`event-dot ${workflow.tone}`} />
-                    <div>
-                      <strong>{workflow.serviceRoute}</strong>
-                      <span>{workflow.title}</span>
-                      <div className="workflow-card-meta">
-                        <StatusChip label={workflow.currentStatus} tone={workflow.tone} />
-                      </div>
-                    </div>
+                    <span>{stage.shortLabel}</span>
+                    <strong>{stage.complete ? "Done" : "Open"}</strong>
                   </button>
                 ))}
               </div>
 
-              <div className="repair-capture-board" aria-label="Technician capture controls">
-                <section className="capture-card">
-                  <div className="capture-card-header">
-                    <span>1</span>
-                    <div>
-                      <p className="meta-label">Removed part</p>
-                      <strong>Scan serial</strong>
-                    </div>
+              <div className="active-stage-card">
+                <div className="active-stage-header">
+                  <div>
+                    <p className="meta-label">{activeStage.label}</p>
+                    <h3>{activeStage.title}</h3>
+                    <span>{activeStage.detail}</span>
                   </div>
-                  <label className="scan-input">
-                    <span>Observed serial</span>
-                    <input
-                      value={removedPartScan}
-                      onChange={(event) => setRemovedPartScan(event.target.value)}
-                      placeholder="Scan or type removed serial"
-                    />
-                  </label>
-                  <div className="capture-actions">
-                    <button type="button" onClick={() => setRemovedPartScan(activeWorkflow.scannedSerial)}>
-                      Scan removed
-                    </button>
-                    <StatusChip
-                      label={removedBaselineMatch ? "Baseline match" : "Review scan"}
-                      tone={removedBaselineMatch ? "green" : activeWorkflow.tone}
-                    />
-                  </div>
-                </section>
+                  <StatusChip label={activeStage.complete ? "Complete" : "Needs action"} tone={activeStage.tone} />
+                </div>
 
-                <section className="capture-card evidence-capture-card">
-                  <div className="capture-card-header">
-                    <span>2</span>
-                    <div>
-                      <p className="meta-label">Image evidence</p>
-                      <strong>Attach photos</strong>
+                {activeTechnicianStage === "select" && (
+                  <div className="stage-focus-grid">
+                    <div className="focus-summary">
+                      <p className="meta-label">Current component</p>
+                      <strong>{selectedNode.label}</strong>
+                      <span>{selectedNode.path}</span>
+                    </div>
+                    <div className="focus-summary">
+                      <p className="meta-label">Expected serial</p>
+                      <strong>{activeWorkflow.expectedSerial}</strong>
+                      <span>{activeWorkflow.partNumber}</span>
+                    </div>
+                    <a className="stage-link-action" href="#assembly-directory">
+                      Change component
+                    </a>
+                  </div>
+                )}
+
+                {activeTechnicianStage === "scan" && (
+                  <div className="single-task-grid">
+                    <label className="scan-input primary-scan-input">
+                      <span>Removed part serial</span>
+                      <input
+                        value={removedPartScan}
+                        onChange={(event) => setRemovedPartScan(event.target.value)}
+                        placeholder="Scan or type removed serial"
+                      />
+                    </label>
+                    <div className="capture-actions">
+                      <button type="button" className="large-action" onClick={() => setRemovedPartScan(activeWorkflow.scannedSerial)}>
+                        Scan removed part
+                      </button>
+                      <StatusChip
+                        label={removedBaselineMatch ? "Baseline match" : "Review scan"}
+                        tone={removedBaselineMatch ? "green" : activeWorkflow.tone}
+                      />
+                    </div>
+                    <div className="focus-summary">
+                      <p className="meta-label">Expected from VIN baseline</p>
+                      <strong>{activeWorkflow.expectedSerial}</strong>
+                      <span>{activeWorkflow.scanDecision}</span>
                     </div>
                   </div>
-                  <label className="upload-target">
-                    <input type="file" accept="image/*" multiple onChange={handleEvidenceFiles} />
-                    <span>Attach removed part, label, damage, or fitted part images</span>
-                  </label>
-                  <div className="attachment-grid">
-                    {capturedEvidence.map((attachment) => (
-                      <article className="attachment-card" key={attachment.id}>
-                        {attachment.previewUrl ? (
-                          <img src={attachment.previewUrl} alt={attachment.label} />
-                        ) : (
-                          <div className="attachment-preview" aria-hidden="true">IMG</div>
-                        )}
+                )}
+
+                {activeTechnicianStage === "photos" && (
+                  <div className="photo-stage-layout">
+                    <label className="upload-target primary-upload-target">
+                      <input type="file" accept="image/*" multiple onChange={handleEvidenceFiles} />
+                      <span>Attach photos of the removed part, serial label, damage, or fitted part</span>
+                    </label>
+                    <div className="attachment-grid tablet-attachment-grid">
+                      {capturedEvidence.map((attachment) => (
+                        <article className="attachment-card" key={attachment.id}>
+                          {attachment.previewUrl ? (
+                            <img src={attachment.previewUrl} alt={attachment.label} />
+                          ) : (
+                            <div className="attachment-preview" aria-hidden="true">IMG</div>
+                          )}
+                          <div>
+                            <strong>{attachment.label}</strong>
+                            <span>{attachment.fileName}</span>
+                            <em>{attachment.evidenceType} / {attachment.capturedAt}</em>
+                          </div>
+                          <StatusChip label={attachment.status} tone={attachment.tone} />
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {activeTechnicianStage === "decision" && (
+                  <div className="route-choice-grid" aria-label="Choose fitment action">
+                    {workflowScenarios.map((workflow) => (
+                      <button
+                        type="button"
+                        key={workflow.id}
+                        className={`workflow-card ${workflow.id === activeWorkflow.id ? "selected" : ""}`}
+                        aria-pressed={workflow.id === activeWorkflow.id}
+                        onClick={() => selectWorkflow(workflow)}
+                      >
+                        <span className={`event-dot ${workflow.tone}`} />
                         <div>
-                          <strong>{attachment.label}</strong>
-                          <span>{attachment.fileName}</span>
-                          <em>{attachment.evidenceType} / {attachment.capturedAt}</em>
+                          <strong>{workflow.serviceRoute}</strong>
+                          <span>{workflow.title}</span>
+                          <div className="workflow-card-meta">
+                            <StatusChip label={workflow.currentStatus} tone={workflow.tone} />
+                          </div>
                         </div>
-                        <StatusChip label={attachment.status} tone={attachment.tone} />
-                      </article>
+                      </button>
                     ))}
                   </div>
-                </section>
+                )}
 
-                <section className="capture-card">
-                  <div className="capture-card-header">
-                    <span>3</span>
-                    <div>
-                      <p className="meta-label">Final fitment</p>
-                      <strong>Book on and commit</strong>
-                    </div>
-                  </div>
-                  <label className="scan-input">
-                    <span>Fitted serial</span>
-                    <input
-                      value={fittedPartScan}
-                      onChange={(event) => setFittedPartScan(event.target.value)}
-                      placeholder="Scan or type fitted serial"
-                    />
-                  </label>
-                  <div className="capture-actions">
-                    <button type="button" onClick={() => setFittedPartScan(activeWorkflow.finalFitmentSerial)}>
-                      Scan fitted
-                    </button>
-                    <button type="button" className="commit-button" onClick={commitLifecycleRecord}>
-                      Commit record
-                    </button>
-                  </div>
-                  <p className={`commit-status ${evidenceReady ? "ready" : ""}`}>{commitStatus}</p>
-                </section>
-              </div>
-
-              <div className="workflow-stage-grid" aria-label="Replace component workflow steps">
-                {workflowStages.map((stage) => (
-                  <div className={`workflow-stage ${stage.tone}`} key={stage.label}>
-                    <span className="workflow-stage-label">{stage.label}</span>
-                    <strong>{stage.title}</strong>
-                    <p>{stage.detail}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="fitment-flow" aria-label="Book off and book on sequence">
-                <div className="fitment-step">
-                  <p className="meta-label">Book off current fitted item</p>
-                  <strong>{removedPartScan || "Awaiting scan"}</strong>
-                  <span>Removed from {selectedNode.label}</span>
-                </div>
-                <div className="fitment-arrow" aria-hidden="true">-&gt;</div>
-                <div className="fitment-step emphasis">
-                  <p className="meta-label">{activeWorkflow.finalFitmentLabel}</p>
-                  <strong>{fittedPartScan || "Awaiting fitted serial"}</strong>
-                  <span>{activeWorkflow.serviceRoute}</span>
-                </div>
-                <div className="fitment-arrow" aria-hidden="true">-&gt;</div>
-                <div className="fitment-step">
-                  <p className="meta-label">Updated VIN record</p>
-                  <strong>{warrantyLabel(activeWorkflow.warrantyImpact)}</strong>
-                  <span>{activeWorkflow.vehicleStateAfterWork}</span>
-                </div>
-              </div>
-
-              <div className="workflow-detail">
-                <div className="workflow-headline">
-                  <div>
-                    <p className="meta-label">Selected route</p>
-                    <strong>{activeWorkflow.title}</strong>
-                    <span>{activeWorkflow.recommendedAction}</span>
-                  </div>
-                  <StatusChip label={warrantyLabel(activeWorkflow.warrantyImpact)} tone={activeWorkflow.tone} />
-                </div>
-
-                <div className="workflow-evidence-grid" aria-label="Repair evidence summary">
-                  <div>
-                    <span>Expected off</span>
-                    <strong>{activeWorkflow.expectedSerial}</strong>
-                  </div>
-                  <div>
-                    <span>Removed scan</span>
-                    <strong>{removedPartScan || "Awaiting scan"}</strong>
-                  </div>
-                  <div>
-                    <span>Fitment route</span>
-                    <strong>{activeWorkflow.serviceRoute}</strong>
-                  </div>
-                  <div>
-                    <span>{activeWorkflow.finalFitmentLabel}</span>
-                    <strong>{fittedPartScan || "Awaiting fitted serial"}</strong>
-                  </div>
-                </div>
-
-                <div className="lifecycle-list">
-                  {activeWorkflow.steps.map((step, index) => (
-                    <div className="lifecycle-step" key={step.label}>
-                      <span className={`event-dot ${step.tone}`} />
-                      <div>
-                        <strong>{index + 1}. {step.label}</strong>
-                        <span>{step.detail}</span>
-                        <em>{activeWorkflow.shipmentTrace.status}</em>
+                {activeTechnicianStage === "commit" && (
+                  <div className="commit-stage-layout">
+                    <label className="scan-input primary-scan-input">
+                      <span>Fitted serial</span>
+                      <input
+                        value={fittedPartScan}
+                        onChange={(event) => setFittedPartScan(event.target.value)}
+                        placeholder="Scan or type fitted serial"
+                      />
+                    </label>
+                    <div className="fitment-flow compact-fitment-flow" aria-label="Book off and book on sequence">
+                      <div className="fitment-step">
+                        <p className="meta-label">Book off</p>
+                        <strong>{removedPartScan || "Awaiting scan"}</strong>
+                        <span>{selectedNode.label}</span>
+                      </div>
+                      <div className="fitment-arrow" aria-hidden="true">-&gt;</div>
+                      <div className="fitment-step emphasis">
+                        <p className="meta-label">{activeWorkflow.finalFitmentLabel}</p>
+                        <strong>{fittedPartScan || "Awaiting fitted serial"}</strong>
+                        <span>{activeWorkflow.serviceRoute}</span>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="capture-actions">
+                      <button type="button" onClick={() => setFittedPartScan(activeWorkflow.finalFitmentSerial)}>
+                        Scan fitted serial
+                      </button>
+                      <button type="button" className="commit-button large-action" onClick={commitLifecycleRecord}>
+                        Commit lifecycle record
+                      </button>
+                    </div>
+                    <p className={`commit-status ${evidenceReady ? "ready" : ""}`}>{commitStatus}</p>
+                  </div>
+                )}
 
-                <div className="evidence-box">
-                  <p className="meta-label">Modification log</p>
-                  <ol className="care-list">
-                    {activeWorkflow.evidenceLog.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ol>
+                <div className="stage-footer">
+                  <button type="button" onClick={() => moveTechnicianStage(-1)} disabled={activeStageIndex === 0}>
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    className="commit-button"
+                    onClick={() => moveTechnicianStage(1)}
+                    disabled={activeStageIndex === workflowStages.length - 1}
+                  >
+                    Next
+                  </button>
                 </div>
               </div>
             </div>
