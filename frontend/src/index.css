@@ -1286,6 +1286,11 @@ button {
   border-color: rgba(34, 197, 94, 0.34);
 }
 
+.stage-tab.locked {
+  cursor: not-allowed;
+  opacity: 0.44;
+}
+
 .stage-tab span,
 .stage-tab strong {
   display: block;
@@ -1439,10 +1444,19 @@ button {
 .stage-footer {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 10px;
   margin-top: 16px;
   padding-top: 14px;
   border-top: 1px solid rgba(42, 52, 70, 0.72);
+}
+
+.stage-footer-note {
+  margin: 0;
+  color: var(--cool-grey);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .stage-footer button {
@@ -1567,6 +1581,11 @@ button {
   color: var(--chrome-silver);
   background: rgba(7, 10, 15, 0.72);
   cursor: pointer;
+}
+
+.capture-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
 }
 
 .capture-actions button:hover,
@@ -1703,6 +1722,71 @@ button {
 
 .commit-status.ready {
   color: #a7f3d0;
+}
+
+.lifecycle-record-card {
+  border: 1px solid rgba(42, 52, 70, 0.88);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(7, 10, 15, 0.46);
+}
+
+.lifecycle-record-card.committed {
+  border-color: rgba(34, 197, 94, 0.42);
+  box-shadow: inset 3px 0 0 var(--verified-green);
+}
+
+.lifecycle-record-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.lifecycle-record-header .meta-label {
+  margin: 0 0 8px;
+}
+
+.lifecycle-record-header strong {
+  display: block;
+  color: var(--ice-white);
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+.lifecycle-record-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.lifecycle-record-grid div {
+  min-height: 70px;
+  border: 1px solid rgba(42, 52, 70, 0.7);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(17, 24, 39, 0.56);
+}
+
+.lifecycle-record-grid span,
+.lifecycle-record-grid strong {
+  display: block;
+}
+
+.lifecycle-record-grid span {
+  color: var(--slate-grey);
+  font-size: 0.68rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.lifecycle-record-grid strong {
+  margin-top: 7px;
+  color: var(--ice-white);
+  font-size: 0.84rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .workflow-stage-grid {
@@ -1977,6 +2061,7 @@ button {
 
   .vin-context-grid,
   .repair-capture-board,
+  .lifecycle-record-grid,
   .workflow-stage-rail,
   .workflow-stage-grid,
   .workspace-grid {
@@ -2028,6 +2113,7 @@ button {
   .scan-comparison,
   .scan-decision-grid,
   .workflow-evidence-grid,
+  .lifecycle-record-grid,
   .fitment-flow,
   .compact-fitment-flow,
   .single-task-grid,

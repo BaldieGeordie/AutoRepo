@@ -1125,6 +1125,8 @@ export default function App() {
   const [removedScanStatus, setRemovedScanStatus] = useState("Ready to scan the removed component.");
   const [photoCaptureStatus, setPhotoCaptureStatus] = useState("Open the camera and capture one evidence image at a time.");
   const [fittedScanStatus, setFittedScanStatus] = useState("Ready to scan the component being fitted.");
+  const [fitmentActionConfirmed, setFitmentActionConfirmed] = useState(false);
+  const [lifecycleCommittedAt, setLifecycleCommittedAt] = useState<string | null>(null);
   const [activeTechnicianStage, setActiveTechnicianStage] = useState<TechnicianStageId>("scan");
 
   const selectedVehicle = vehicleRecords[0];
@@ -1143,7 +1145,8 @@ export default function App() {
   const fittedSerialCaptured = fittedPartScan.trim().length > 0;
   const removedBaselineMatch =
     removedPartScan.trim().toUpperCase() === activeWorkflow.expectedSerial.trim().toUpperCase();
-  const evidenceReady = scanCaptured && fittedSerialCaptured && capturedEvidence.length > 0;
+  const photoEvidenceCaptured = capturedEvidence.length > 0;
+  const lifecycleReady = scanCaptured && photoEvidenceCaptured && fitmentActionConfirmed && fittedSerialCaptured;
   const workflowStages: Array<{
     id: TechnicianStageId;
     label: string;
@@ -1177,26 +1180,28 @@ export default function App() {
       shortLabel: "Photos",
       title: `${capturedEvidence.length} image record${capturedEvidence.length === 1 ? "" : "s"}`,
       detail: "Capture the removed part, serial label, damage, and final fitted state.",
-      tone: capturedEvidence.length > 0 ? "green" as Tone : "amber" as Tone,
-      complete: capturedEvidence.length > 0,
+      tone: photoEvidenceCaptured ? "green" as Tone : "amber" as Tone,
+      complete: photoEvidenceCaptured,
     },
     {
       id: "decision",
       label: "4. Choose action",
       shortLabel: "Action",
-      title: activeWorkflow.serviceRoute,
-      detail: activeWorkflow.recommendedAction,
+      title: fitmentActionConfirmed ? activeWorkflow.serviceRoute : "Choose service outcome",
+      detail: fitmentActionConfirmed ? activeWorkflow.recommendedAction : "Select whether the removed component is replaced, re-fitted, or returned with a warranty flag.",
       tone: activeWorkflow.tone,
-      complete: Boolean(activeWorkflow.serviceRoute),
+      complete: fitmentActionConfirmed,
     },
     {
       id: "commit",
       label: "5. Book on and commit",
       shortLabel: "Commit",
-      title: fittedSerialCaptured ? fittedPartScan : "Awaiting fitted serial",
-      detail: `${capturedEvidence.length} image record${capturedEvidence.length === 1 ? "" : "s"} attached. ${activeWorkflow.networkFitmentEvidence}`,
-      tone: evidenceReady ? activeWorkflow.tone : "amber" as Tone,
-      complete: evidenceReady,
+      title: lifecycleCommittedAt ? "Lifecycle record committed" : fittedSerialCaptured ? fittedPartScan : "Awaiting fitted serial",
+      detail: lifecycleCommittedAt
+        ? `Repair event committed at ${lifecycleCommittedAt} with ${capturedEvidence.length} image record${capturedEvidence.length === 1 ? "" : "s"}.`
+        : `${capturedEvidence.length} image record${capturedEvidence.length === 1 ? "" : "s"} attached. ${activeWorkflow.networkFitmentEvidence}`,
+      tone: lifecycleReady || lifecycleCommittedAt ? activeWorkflow.tone : "amber" as Tone,
+      complete: Boolean(lifecycleCommittedAt),
     },
   ];
   const activeStageIndex = Math.max(
@@ -1204,6 +1209,19 @@ export default function App() {
     workflowStages.findIndex((stage) => stage.id === activeTechnicianStage),
   );
   const activeStage = workflowStages[activeStageIndex] || workflowStages[0];
+  const highestAvailableStageIndex = fitmentActionConfirmed
+    ? 4
+    : photoEvidenceCaptured
+      ? 3
+      : scanCaptured
+        ? 2
+        : 1;
+  const canMoveNext =
+    activeStageIndex < workflowStages.length - 1 &&
+    activeStage.complete &&
+    activeStageIndex < highestAvailableStageIndex;
+  const nextStage = workflowStages[Math.min(activeStageIndex + 1, workflowStages.length - 1)];
+  const nextActionLabel = activeStageIndex === workflowStages.length - 1 ? "Record complete" : `Next: ${nextStage.shortLabel}`;
 
   function toggleNodeExpanded(nodeId: string) {
     setExpandedNodeIds((current) => {
@@ -1225,13 +1243,17 @@ export default function App() {
   function selectWorkflow(workflow: WarrantyWorkflow) {
     setActiveWorkflowId(workflow.id);
     revealNode(workflow.assemblyNodeId);
-    setRemovedPartScan("");
     setFittedPartScan("");
-    setCapturedEvidence([]);
-    setCommitStatus("Evidence capture ready");
-    setRemovedScanStatus("Ready to scan the removed component.");
-    setPhotoCaptureStatus("Open the camera and capture one evidence image at a time.");
+    setFitmentActionConfirmed(true);
+    setLifecycleCommittedAt(null);
     setFittedScanStatus("Ready to scan the component being fitted.");
+    setCommitStatus(`${workflow.serviceRoute} selected. Scan the fitted serial before committing.`);
+  }
+
+  function openTechnicianStage(stageId: TechnicianStageId, stageIndex: number) {
+    if (stageIndex <= highestAvailableStageIndex) {
+      setActiveTechnicianStage(stageId);
+    }
   }
 
   function handleEvidenceFiles(event: ChangeEvent<HTMLInputElement>) {
@@ -1253,6 +1275,7 @@ export default function App() {
     }));
 
     setCapturedEvidence((current) => [...current, ...nextAttachments]);
+    setLifecycleCommittedAt(null);
     setPhotoCaptureStatus(
       `${files.length} image${files.length === 1 ? "" : "s"} captured from camera. Repeat capture for extra angles.`,
     );
@@ -1267,6 +1290,9 @@ export default function App() {
     const serial = activeWorkflow.scannedSerial;
     const baselineMatch = serial.trim().toUpperCase() === activeWorkflow.expectedSerial.trim().toUpperCase();
     setRemovedPartScan(serial);
+    setFitmentActionConfirmed(false);
+    setFittedPartScan("");
+    setLifecycleCommittedAt(null);
     setRemovedScanStatus(
       baselineMatch
         ? `Captured ${serial} at ${captureTime()}. Matches the VIN baseline.`
@@ -1278,15 +1304,21 @@ export default function App() {
   function scanFittedPart() {
     const serial = activeWorkflow.finalFitmentSerial;
     setFittedPartScan(serial);
+    setLifecycleCommittedAt(null);
     setFittedScanStatus(`Captured ${serial} at ${captureTime()}. Ready to book on against this VIN.`);
     setCommitStatus("Fitted component captured. Commit the lifecycle record when the evidence set is complete.");
   }
 
   function commitLifecycleRecord() {
+    if (!lifecycleReady) {
+      setCommitStatus("Scan removed part, attach image evidence, choose the action, and scan the fitted serial before commit.");
+      return;
+    }
+
+    const committedAt = captureTime();
+    setLifecycleCommittedAt(committedAt);
     setCommitStatus(
-      evidenceReady
-        ? `Lifecycle record ready: ${removedPartScan} off, ${fittedPartScan} on, ${capturedEvidence.length} image record${capturedEvidence.length === 1 ? "" : "s"} attached.`
-        : "Scan removed part, confirm fitted serial, and attach at least one image before commit.",
+      `Committed at ${committedAt}: ${removedPartScan} booked off, ${fittedPartScan} booked on, ${capturedEvidence.length} image record${capturedEvidence.length === 1 ? "" : "s"} attached.`,
     );
   }
 
@@ -1333,6 +1365,8 @@ export default function App() {
           setRemovedPartScan("");
           setFittedPartScan("");
           setCapturedEvidence([]);
+          setFitmentActionConfirmed(false);
+          setLifecycleCommittedAt(null);
         }
       })
       .catch((err: Error) => setWorkflowError(err.message));
@@ -1619,17 +1653,23 @@ export default function App() {
             </div>
             <div className="workflow-layout">
               <div className="workflow-stage-rail" aria-label="Technician workflow stages">
-                {workflowStages.map((stage) => (
-                  <button
-                    type="button"
-                    className={`stage-tab ${stage.id === activeStage.id ? "active" : ""} ${stage.complete ? "complete" : ""}`}
-                    key={stage.id}
-                    onClick={() => setActiveTechnicianStage(stage.id)}
-                  >
-                    <span>{stage.shortLabel}</span>
-                    <strong>{stage.complete ? "Done" : "Open"}</strong>
-                  </button>
-                ))}
+                {workflowStages.map((stage, index) => {
+                  const stageLocked = index > highestAvailableStageIndex;
+                  const stageState = stageLocked ? "Locked" : stage.complete ? "Done" : index === activeStageIndex ? "Now" : "Ready";
+
+                  return (
+                    <button
+                      type="button"
+                      className={`stage-tab ${stage.id === activeStage.id ? "active" : ""} ${stage.complete ? "complete" : ""} ${stageLocked ? "locked" : ""}`}
+                      key={stage.id}
+                      onClick={() => openTechnicianStage(stage.id, index)}
+                      disabled={stageLocked}
+                    >
+                      <span>{stage.shortLabel}</span>
+                      <strong>{stageState}</strong>
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="active-stage-card">
@@ -1669,6 +1709,9 @@ export default function App() {
                         onChange={(event) => {
                           const nextSerial = event.target.value;
                           setRemovedPartScan(nextSerial);
+                          setFitmentActionConfirmed(false);
+                          setFittedPartScan("");
+                          setLifecycleCommittedAt(null);
                           setRemovedScanStatus(
                             nextSerial.trim()
                               ? `Manual serial entry captured for ${nextSerial.trim()}.`
@@ -1734,24 +1777,31 @@ export default function App() {
 
                 {activeTechnicianStage === "decision" && (
                   <div className="route-choice-grid" aria-label="Choose fitment action">
-                    {workflowScenarios.map((workflow) => (
-                      <button
-                        type="button"
-                        key={workflow.id}
-                        className={`workflow-card ${workflow.id === activeWorkflow.id ? "selected" : ""}`}
-                        aria-pressed={workflow.id === activeWorkflow.id}
-                        onClick={() => selectWorkflow(workflow)}
-                      >
-                        <span className={`event-dot ${workflow.tone}`} />
-                        <div>
-                          <strong>{workflow.serviceRoute}</strong>
-                          <span>{workflow.title}</span>
-                          <div className="workflow-card-meta">
-                            <StatusChip label={workflow.currentStatus} tone={workflow.tone} />
+                    {workflowScenarios.map((workflow) => {
+                      const selectedAction = fitmentActionConfirmed && workflow.id === activeWorkflow.id;
+
+                      return (
+                        <button
+                          type="button"
+                          key={workflow.id}
+                          className={`workflow-card ${selectedAction ? "selected" : ""}`}
+                          aria-pressed={selectedAction}
+                          onClick={() => selectWorkflow(workflow)}
+                        >
+                          <span className={`event-dot ${workflow.tone}`} />
+                          <div>
+                            <strong>{workflow.serviceRoute}</strong>
+                            <span>{workflow.title}</span>
+                            <div className="workflow-card-meta">
+                              <StatusChip
+                                label={selectedAction ? "Selected action" : workflow.currentStatus}
+                                tone={workflow.tone}
+                              />
+                            </div>
                           </div>
-                        </div>
-                      </button>
-                    ))}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
 
@@ -1764,6 +1814,7 @@ export default function App() {
                         onChange={(event) => {
                           const nextSerial = event.target.value;
                           setFittedPartScan(nextSerial);
+                          setLifecycleCommittedAt(null);
                           setFittedScanStatus(
                             nextSerial.trim()
                               ? `Manual fitted serial entry captured for ${nextSerial.trim()}.`
@@ -1790,12 +1841,63 @@ export default function App() {
                       <button type="button" onClick={scanFittedPart}>
                         Scan fitted serial
                       </button>
-                      <button type="button" className="commit-button large-action" onClick={commitLifecycleRecord}>
+                      <button
+                        type="button"
+                        className="commit-button large-action"
+                        onClick={commitLifecycleRecord}
+                        disabled={!lifecycleReady}
+                      >
                         Commit lifecycle record
                       </button>
                     </div>
                     <p className={`capture-status ${fittedSerialCaptured ? "ready" : ""}`}>{fittedScanStatus}</p>
-                    <p className={`commit-status ${evidenceReady ? "ready" : ""}`}>{commitStatus}</p>
+                    <p className={`commit-status ${lifecycleReady || lifecycleCommittedAt ? "ready" : ""}`}>{commitStatus}</p>
+                    <div className={`lifecycle-record-card ${lifecycleCommittedAt ? "committed" : ""}`}>
+                      <div className="lifecycle-record-header">
+                        <div>
+                          <p className="meta-label">{lifecycleCommittedAt ? "Committed record" : "Draft lifecycle record"}</p>
+                          <strong>SO-WTY-184201-044 / {selectedVehicle.vin}</strong>
+                        </div>
+                        <StatusChip
+                          label={lifecycleCommittedAt ? "Committed" : lifecycleReady ? "Ready to commit" : "Draft"}
+                          tone={lifecycleCommittedAt ? "green" : lifecycleReady ? activeWorkflow.tone : "amber"}
+                        />
+                      </div>
+                      <div className="lifecycle-record-grid">
+                        <div>
+                          <span>Component</span>
+                          <strong>{selectedNode.label}</strong>
+                        </div>
+                        <div>
+                          <span>Book off</span>
+                          <strong>{removedPartScan || "Awaiting removed scan"}</strong>
+                        </div>
+                        <div>
+                          <span>Book on</span>
+                          <strong>{fittedPartScan || "Awaiting fitted scan"}</strong>
+                        </div>
+                        <div>
+                          <span>Outcome</span>
+                          <strong>{fitmentActionConfirmed ? activeWorkflow.serviceRoute : "Action not chosen"}</strong>
+                        </div>
+                        <div>
+                          <span>Authenticity</span>
+                          <strong>{activeWorkflow.partAuthenticity}</strong>
+                        </div>
+                        <div>
+                          <span>Evidence</span>
+                          <strong>{capturedEvidence.length} image record{capturedEvidence.length === 1 ? "" : "s"}</strong>
+                        </div>
+                        <div>
+                          <span>Repairer</span>
+                          <strong>{selectedVehicle.repairerTier}</strong>
+                        </div>
+                        <div>
+                          <span>Warranty route</span>
+                          <strong>{activeWorkflow.warrantyImpact}</strong>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -1803,13 +1905,22 @@ export default function App() {
                   <button type="button" onClick={() => moveTechnicianStage(-1)} disabled={activeStageIndex === 0}>
                     Back
                   </button>
+                  <p className="stage-footer-note">
+                    {activeStageIndex === workflowStages.length - 1
+                      ? lifecycleCommittedAt
+                        ? "Lifecycle record is committed to the VIN history."
+                        : "Commit the lifecycle record to close this repair event."
+                      : activeStage.complete
+                        ? "Ready for the next step."
+                        : "Complete this step to continue."}
+                  </p>
                   <button
                     type="button"
                     className="commit-button"
                     onClick={() => moveTechnicianStage(1)}
-                    disabled={activeStageIndex === workflowStages.length - 1}
+                    disabled={!canMoveNext}
                   >
-                    Next
+                    {nextActionLabel}
                   </button>
                 </div>
               </div>
